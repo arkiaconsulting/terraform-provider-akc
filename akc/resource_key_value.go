@@ -22,10 +22,12 @@ func resourceKeyValue() *schema.Resource {
 			"endpoint": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"key": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"value": &schema.Schema{
 				Type:     schema.TypeString,
@@ -34,7 +36,8 @@ func resourceKeyValue() *schema.Resource {
 			"label": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
-				Default:  nil,
+				Default:  "%00",
+				ForceNew: true,
 			},
 		},
 	}
@@ -45,13 +48,14 @@ func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 	client := client.NewAppConfigurationClient(endpoint)
 	key := d.Get("key").(string)
 	value := d.Get("value").(string)
+	label := d.Get("label").(string)
 
-	_, err := client.SetKeyValue(key, value)
+	_, err := client.SetKeyValueWithLabel(key, value, label)
 	if err != nil {
 		return err
 	}
 
-	id, err := formatID(endpoint, key)
+	id, err := formatID(endpoint, label, key)
 	if err != nil {
 		return err
 	}
@@ -64,39 +68,43 @@ func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 	log.Print("[INFO] Reading...")
 
-	endpoint, key := parseID(d.Id())
+	endpoint, label, key := parseID(d.Id())
 	client := client.NewAppConfigurationClient(endpoint)
 
-	result, err := client.GetKeyValue(key)
+	result, err := client.GetKeyValueWithLabel(key, label)
 	if err != nil {
 		return err
 	}
 
-	id, err := formatID(endpoint, key)
+	id, err := formatID(endpoint, label, key)
 	if err != nil {
 		return err
+	}
+
+	if result.Label == "" {
+		result.Label = "%00"
 	}
 
 	d.SetId(id)
 	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("value", result.Value)
+	d.Set("label", result.Label)
 
 	return nil
 }
 
 func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
-	endpoint := d.Get("endpoint").(string)
+	endpoint, label, key := parseID(d.Id())
 	client := client.NewAppConfigurationClient(endpoint)
-	key := d.Get("key").(string)
 	value := d.Get("value").(string)
 
-	_, err := client.SetKeyValue(key, value)
+	_, err := client.SetKeyValueWithLabel(key, value, label)
 	if err != nil {
 		return err
 	}
 
-	id, err := formatID(endpoint, key)
+	id, err := formatID(endpoint, label, key)
 	if err != nil {
 		return err
 	}
@@ -107,13 +115,11 @@ func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
-	log.Print("[INFO] Destroying...")
+	endpoint, label, key := parseID(d.Id())
 
-	endpoint := d.Get("endpoint").(string)
 	client := client.NewAppConfigurationClient(endpoint)
-	key := d.Get("key").(string)
 
-	isDeleted, err := client.DeleteKeyValue(key)
+	isDeleted, err := client.DeleteKeyValueWithLabel(key, label)
 	if err != nil {
 		return err
 	}
@@ -126,10 +132,10 @@ func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceKeyValueExists(d *schema.ResourceData, m interface{}) (bool, error) {
-	endpoint, key := parseID(d.Id())
+	endpoint, label, key := parseID(d.Id())
 	client := client.NewAppConfigurationClient(endpoint)
 
-	_, err := client.GetKeyValue(key)
+	_, err := client.GetKeyValueWithLabel(key, label)
 	if err != nil {
 		return false, err
 	}
@@ -137,7 +143,7 @@ func resourceKeyValueExists(d *schema.ResourceData, m interface{}) (bool, error)
 	return true, nil
 }
 
-func formatID(endpoint string, key string) (string, error) {
+func formatID(endpoint string, label string, key string) (string, error) {
 	url, err := url.Parse(endpoint)
 	if err != nil {
 		return "", fmt.Errorf("Unable to parse the given endpoint %s", endpoint)
@@ -145,17 +151,18 @@ func formatID(endpoint string, key string) (string, error) {
 
 	name := url.Host
 
-	return fmt.Sprintf("%s/%s", name, key), nil
+	return fmt.Sprintf("%s/%s/%s", name, label, key), nil
 }
 
-func parseID(id string) (endpoint string, key string) {
+func parseID(id string) (endpoint string, label string, key string) {
 	log.Printf("[INFO] Parsing id %s", id)
 	split := strings.Split(id, "/")
 
 	endpoint = fmt.Sprintf("https://%s", split[0])
-	key = split[1]
+	label = split[1]
+	key = split[2]
 
-	log.Printf("[INFO] Parsed %s with key: %s", endpoint, key)
+	log.Printf("[INFO] Parsed %s with label %s and key: %s", endpoint, label, key)
 
-	return endpoint, key
+	return endpoint, label, key
 }

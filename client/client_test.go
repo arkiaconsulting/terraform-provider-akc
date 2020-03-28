@@ -14,7 +14,7 @@ func TestGetKeyValueDoesntExistShouldFail(t *testing.T) {
 
 	_, err := client.GetKeyValue(key)
 
-	assert.Equal(t, kVError(key, "Not found"), err)
+	assert.Equal(t, kVError("%00", key, "Not found"), err)
 }
 
 func TestCreateKeyValueWithoutLabelShouldPass(t *testing.T) {
@@ -28,6 +28,20 @@ func TestCreateKeyValueWithoutLabelShouldPass(t *testing.T) {
 	assert.Equal(t, key, result.Key)
 	assert.Equal(t, value, result.Value)
 	assert.Equal(t, "", result.Label)
+}
+
+func TestCreateKeyValueWithLabelShouldPass(t *testing.T) {
+	client := NewAppConfigurationClient(uri)
+	const key = "myKey"
+	const value = "myValue"
+	const label = "myLabel"
+
+	result, err := client.SetKeyValueWithLabel(key, value, label)
+	assert.Nil(nil, err)
+
+	assert.Equal(t, key, result.Key)
+	assert.Equal(t, value, result.Value)
+	assert.Equal(t, label, result.Label)
 }
 
 func TestCreateAndGetKeyValueWithoutLabelShouldPass(t *testing.T) {
@@ -76,7 +90,7 @@ func TestGetKeyValueWithLabelDoesntExistShouldFail(t *testing.T) {
 
 	_, err := client.GetKeyValueWithLabel(key, label)
 
-	assert.Equal(t, kVError(key, "Not found"), err)
+	assert.Equal(t, kVError(label, key, "Not found"), err)
 }
 
 func TestGetKeyValueWithLabelShouldRespectLabel(t *testing.T) {
@@ -90,7 +104,7 @@ func TestGetKeyValueWithLabelShouldRespectLabel(t *testing.T) {
 
 	_, err = client.GetKeyValue(key)
 
-	assert.Equal(t, kVError(key, "Not found"), err)
+	assert.Equal(t, kVError("%00", key, "Not found"), err)
 }
 
 func TestGetKeyValueWithLabelShouldPass(t *testing.T) {
@@ -128,6 +142,23 @@ func TestDeleteKeyValueWithLabelShouldDeleteConcernedOnly(t *testing.T) {
 
 	_, err = client.GetKeyValueWithLabel(key, "otherLabel")
 	assert.Nil(nil, err)
+}
+
+func TestDeleteKeyValueWithLabelShouldPass(t *testing.T) {
+	client := NewAppConfigurationClient(uri)
+	const key = "myKey"
+	const label = "myLabel"
+	const value = "myValue"
+
+	_, err := client.SetKeyValueWithLabel(key, value, label)
+	assert.Nil(nil, err)
+
+	isDeleted, err := client.DeleteKeyValueWithLabel(key, label)
+	assert.Nil(nil, err)
+	assert.True(t, isDeleted)
+
+	_, err = client.GetKeyValueWithLabel(key, label)
+	assert.NotNil(nil, err)
 }
 
 func TestGetKeyValueWithoutLabelShouldPass(t *testing.T) {

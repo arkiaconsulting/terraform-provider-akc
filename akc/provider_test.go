@@ -67,3 +67,26 @@ resource "akc_key_value" "test" {
 }
 `)
 }
+
+func BuildTerraformConfigWithLabel() string {
+	return fmt.Sprintf(`
+resource "akc_key_value" "test" {
+  endpoint     = "https://testlg.azconfig.io"
+  key = "myKey"
+  value = "myValue"
+  label = "myLabel"
+}
+`)
+}
+
+// BuildTerraformConfigUpdateValue build terraform config
+func BuildTerraformConfigUpdateValueWithLabel() string {
+	return fmt.Sprintf(`
+resource "akc_key_value" "test" {
+  endpoint     = "https://testlg.azconfig.io"
+  key = "myKey"
+  value = "myValueUpdated"
+  label = "myLabel"
+}
+`)
+}

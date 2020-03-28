@@ -14,13 +14,14 @@ type KeyValueResponse struct {
 
 type keyValueError struct {
 	message string
+	label   string
 	key     string
 }
 
-func kVError(key string, message string) error {
-	return &keyValueError{key: key, message: message}
+func kVError(label string, key string, message string) error {
+	return &keyValueError{label: label, key: key, message: message}
 }
 
 func (e *keyValueError) Error() string {
-	return fmt.Sprintf("KV error <%s>: %s", e.key, e.message)
+	return fmt.Sprintf("KV error %s/%s: %s", e.label, e.key, e.message)
 }

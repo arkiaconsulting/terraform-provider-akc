@@ -55,14 +55,14 @@ func (client *AppConfigClient) getPreparer(label string, additionalDecorators ..
 
 // GetKeyValue get a given App Configuration key-value
 func (client *AppConfigClient) GetKeyValue(key string) (KeyValueResponse, error) {
-	log.Print("GetKeyValue")
+	logHere("GetKeyValue", "%00", key)
 
 	return client.GetKeyValueWithLabel(key, "%00")
 }
 
 // GetKeyValueWithLabel get a given App Configuration key-value with label
 func (client *AppConfigClient) GetKeyValueWithLabel(key string, label string) (KeyValueResponse, error) {
-	log.Printf("GetKeyValueWithLabel %s, %s", key, label)
+	logHere("GetKeyValueWithLabel", label, key)
 
 	result := KeyValueResponse{}
 	pathParameters := map[string]interface{}{
@@ -77,21 +77,21 @@ func (client *AppConfigClient) GetKeyValueWithLabel(key string, label string) (K
 	).Prepare(&http.Request{})
 
 	if err != nil {
-		return result, kVError(key, "Fail preparing request")
+		return result, kVError(label, key, "Fail preparing request")
 	}
 
 	resp, err := client.Send(req)
 	if err != nil {
-		return result, kVError(key, "Fail sending request")
+		return result, kVError(label, key, "Fail sending request")
 	}
 
 	if utils.ResponseWasNotFound(resp) {
-		return result, kVError(key, "Not found")
+		return result, kVError(label, key, "Not found")
 	}
 
 	err = getJSON(resp, &result)
 	if err != nil {
-		return result, kVError(key, "Fail reading json response")
+		return result, kVError(label, key, "Fail reading json response")
 	}
 
 	return result, nil
@@ -99,14 +99,14 @@ func (client *AppConfigClient) GetKeyValueWithLabel(key string, label string) (K
 
 // SetKeyValue creates a key with the given value
 func (client *AppConfigClient) SetKeyValue(key string, value string) (KeyValueResponse, error) {
-	log.Print("SetKeyValue")
+	logHere("SetKeyValue", "%00", key)
 
 	return client.SetKeyValueWithLabel(key, value, "%00")
 }
 
 // SetKeyValueWithLabel creates a key with the given value and label
 func (client *AppConfigClient) SetKeyValueWithLabel(key string, value string, label string) (KeyValueResponse, error) {
-	log.Print("SetKeyValueWithLabel")
+	logHere("SetKeyValueWithLabel", label, key)
 
 	result := KeyValueResponse{}
 	pathParameters := map[string]interface{}{
@@ -125,17 +125,17 @@ func (client *AppConfigClient) SetKeyValueWithLabel(key string, value string, la
 		autorest.WithJSON(payload),
 	).Prepare(&http.Request{})
 	if err != nil {
-		return result, kVError(key, "Fail preparing request")
+		return result, kVError(label, key, "Fail preparing request")
 	}
 
 	resp, err := client.Send(req)
 	if err != nil {
-		return result, kVError(key, "Fail sending request")
+		return result, kVError(label, key, "Fail sending request")
 	}
 
 	err = getJSON(resp, &result)
 	if err != nil {
-		return result, kVError(key, "Fail reading json response")
+		return result, kVError(label, key, "Fail reading json response")
 	}
 
 	return result, nil
@@ -143,14 +143,14 @@ func (client *AppConfigClient) SetKeyValueWithLabel(key string, value string, la
 
 // DeleteKeyValue get a given App Configuration key-value
 func (client *AppConfigClient) DeleteKeyValue(key string) (bool, error) {
-	log.Print("DeleteKeyValue")
+	logHere("DeleteKeyValue", "%00", key)
 
 	return client.DeleteKeyValueWithLabel(key, "%00")
 }
 
 // DeleteKeyValueWithLabel get a given App Configuration key-value with label
 func (client *AppConfigClient) DeleteKeyValueWithLabel(key string, label string) (bool, error) {
-	log.Print("DeleteKeyValueWithLabel")
+	logHere("DeleteKeyValueWithLabel", label, key)
 
 	pathParameters := map[string]interface{}{
 		"key": key,
@@ -163,12 +163,12 @@ func (client *AppConfigClient) DeleteKeyValueWithLabel(key string, label string)
 	).Prepare(&http.Request{})
 
 	if err != nil {
-		return false, kVError(key, "Fail preparing request")
+		return false, kVError(label, key, "Fail preparing request")
 	}
 
 	resp, err := client.Send(req)
 	if err != nil {
-		return false, kVError(key, "Fail sending request")
+		return false, kVError(label, key, "Fail sending request")
 	}
 
 	if resp.StatusCode == http.StatusNoContent {
@@ -190,4 +190,8 @@ func getJSON(response *http.Response, target interface{}) error {
 	err := dec.Decode(target)
 
 	return err
+}
+
+func logHere(method string, label string, key string) {
+	log.Printf("[INFO] %s: (%s/%s)", method, label, key)
 }
