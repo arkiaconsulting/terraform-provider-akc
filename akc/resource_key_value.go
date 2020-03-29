@@ -119,13 +119,9 @@ func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 
 	client := client.NewAppConfigurationClient(endpoint)
 
-	isDeleted, err := client.DeleteKeyValueWithLabel(key, label)
+	_, err := client.DeleteKeyValueWithLabel(key, label)
 	if err != nil {
 		return err
-	}
-
-	if !isDeleted {
-		log.Printf("[WARNING] KV was not deleted")
 	}
 
 	return nil

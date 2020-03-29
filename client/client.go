@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -31,67 +30,53 @@ func NewAppConfigurationClient(appConfigURI string) *AppConfigClient {
 	}
 }
 
-func (client *AppConfigClient) getPreparer(label string, additionalDecorators ...autorest.PrepareDecorator) autorest.Preparer {
+func (client *AppConfigClient) getPreparer(label string, key string, additionalDecorators ...autorest.PrepareDecorator) autorest.Preparer {
 	const apiVersion = "1.0"
 	queryParameters := map[string]interface{}{
 		"label":       label,
 		"api-version": apiVersion,
 	}
 
-	decorators := []autorest.PrepareDecorator{
-		autorest.WithBaseURL(client.AppConfigURI),
+	pathParameters := map[string]interface{}{
+		"key": key,
 	}
 
-	queryDecorator := []autorest.PrepareDecorator{
+	decorators := []autorest.PrepareDecorator{
+		autorest.WithBaseURL(client.AppConfigURI),
+		autorest.WithPathParameters("/kv/{key}", pathParameters),
 		autorest.WithQueryParameters(queryParameters),
+		client.Client.WithAuthorization(),
 	}
 
 	decorators = append(decorators, additionalDecorators...)
-	decorators = append(decorators, queryDecorator...)
-	decorators = append([]autorest.PrepareDecorator{client.Client.WithAuthorization()}, decorators...)
 
 	return autorest.CreatePreparer(decorators...)
 }
 
 // GetKeyValue get a given App Configuration key-value
 func (client *AppConfigClient) GetKeyValue(key string) (KeyValueResponse, error) {
-	logHere("GetKeyValue", "%00", key)
-
 	return client.GetKeyValueWithLabel(key, "%00")
 }
 
 // GetKeyValueWithLabel get a given App Configuration key-value with label
 func (client *AppConfigClient) GetKeyValueWithLabel(key string, label string) (KeyValueResponse, error) {
-	logHere("GetKeyValueWithLabel", label, key)
-
 	result := KeyValueResponse{}
-	pathParameters := map[string]interface{}{
-		"key":   key,
-		"label": label,
-	}
-
-	req, err := client.getPreparer(
+	resp, err := client.send(
 		label,
+		key,
 		autorest.AsGet(),
-		autorest.WithPathParameters("/kv/{key}", pathParameters),
-	).Prepare(&http.Request{})
+	)
 
 	if err != nil {
-		return result, kVError(label, key, "Fail preparing request")
-	}
-
-	resp, err := client.Send(req)
-	if err != nil {
-		return result, kVError(label, key, "Fail sending request")
+		return result, UnexpectedError.wrap(err)
 	}
 
 	if utils.ResponseWasNotFound(resp) {
-		return result, kVError(label, key, "Not found")
+		return result, KVNotFoundError.with(key)
 	}
 
-	err = getJSON(resp, &result)
-	if err != nil {
-		return result, kVError(label, key, "Fail reading json response")
+	if err = getJSON(resp, &result); err != nil {
+		return result, UnexpectedError.wrap(err)
 	}
 
 	return result, nil
@@ -99,43 +84,30 @@ func (client *AppConfigClient) GetKeyValueWithLabel(key string, label string) (K
 
 // SetKeyValue creates a key with the given value
 func (client *AppConfigClient) SetKeyValue(key string, value string) (KeyValueResponse, error) {
-	logHere("SetKeyValue", "%00", key)
-
 	return client.SetKeyValueWithLabel(key, value, "%00")
 }
 
 // SetKeyValueWithLabel creates a key with the given value and label
 func (client *AppConfigClient) SetKeyValueWithLabel(key string, value string, label string) (KeyValueResponse, error) {
-	logHere("SetKeyValueWithLabel", label, key)
-
 	result := KeyValueResponse{}
-	pathParameters := map[string]interface{}{
-		"key": key,
-	}
-
 	payload := setKeyValuePayload{
 		Value: value,
 	}
 
-	req, err := client.getPreparer(
+	resp, err := client.send(
 		label,
+		key,
 		autorest.AsContentType("application/vnd.microsoft.appconfig.kv+json"),
 		autorest.AsPut(),
-		autorest.WithPathParameters("/kv/{key}", pathParameters),
 		autorest.WithJSON(payload),
-	).Prepare(&http.Request{})
+	)
 	if err != nil {
-		return result, kVError(label, key, "Fail preparing request")
-	}
-
-	resp, err := client.Send(req)
-	if err != nil {
-		return result, kVError(label, key, "Fail sending request")
+		return result, UnexpectedError.wrap(err)
 	}
 
 	err = getJSON(resp, &result)
 	if err != nil {
-		return result, kVError(label, key, "Fail reading json response")
+		return result, UnexpectedError.wrap(err)
 	}
 
 	return result, nil
@@ -143,32 +115,18 @@ func (client *AppConfigClient) SetKeyValueWithLabel(key string, value string, la
 
 // DeleteKeyValue get a given App Configuration key-value
 func (client *AppConfigClient) DeleteKeyValue(key string) (bool, error) {
-	logHere("DeleteKeyValue", "%00", key)
-
 	return client.DeleteKeyValueWithLabel(key, "%00")
 }
 
 // DeleteKeyValueWithLabel get a given App Configuration key-value with label
 func (client *AppConfigClient) DeleteKeyValueWithLabel(key string, label string) (bool, error) {
-	logHere("DeleteKeyValueWithLabel", label, key)
-
-	pathParameters := map[string]interface{}{
-		"key": key,
-	}
-
-	req, err := client.getPreparer(
+	resp, err := client.send(
 		label,
+		key,
 		autorest.AsDelete(),
-		autorest.WithPathParameters("/kv/{key}", pathParameters),
-	).Prepare(&http.Request{})
-
+	)
 	if err != nil {
-		return false, kVError(label, key, "Fail preparing request")
-	}
-
-	resp, err := client.Send(req)
-	if err != nil {
-		return false, kVError(label, key, "Fail sending request")
+		return false, UnexpectedError.wrap(err)
 	}
 
 	if resp.StatusCode == http.StatusNoContent {
@@ -192,6 +150,21 @@ func getJSON(response *http.Response, target interface{}) error {
 	return err
 }
 
-func logHere(method string, label string, key string) {
-	log.Printf("[INFO] %s: (%s/%s)", method, label, key)
+func (client *AppConfigClient) send(label string, key string, additionalDecorator ...autorest.PrepareDecorator) (*http.Response, error) {
+	req, err := client.getPreparer(
+		label,
+		key,
+		additionalDecorator...,
+	).Prepare(&http.Request{})
+
+	if err != nil {
+		return nil, UnexpectedError.wrap(err)
+	}
+
+	resp, err := client.Send(req)
+	if err != nil {
+		return nil, UnexpectedError.wrap(err)
+	}
+
+	return resp, err
 }

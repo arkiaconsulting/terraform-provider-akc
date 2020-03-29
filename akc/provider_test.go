@@ -21,6 +21,8 @@ var testProviders = map[string]terraform.ResourceProvider{
 }
 var testAccProvider *schema.Provider
 
+const endpointUnderTest = "https://testlg.azconfig.io"
+
 func TestProvider(t *testing.T) {
 	if err := Provider().(*schema.Provider).InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)
@@ -47,46 +49,23 @@ func preCheck(t *testing.T) {
 }
 
 // BuildTerraformConfig build terraform config
-func BuildTerraformConfig() string {
+func BuildTerraformConfigWithoutLabel(key string, value string) string {
 	return fmt.Sprintf(`
 resource "akc_key_value" "test" {
-  endpoint     = "https://testlg.azconfig.io"
-  key = "myKey"
-  value = "myValue"
+  endpoint     = "%s"
+  key = "%s"
+  value = "%s"
 }
-`)
+`, endpointUnderTest, key, value)
 }
 
-// BuildTerraformConfigUpdateValue build terraform config
-func BuildTerraformConfigUpdateValue() string {
+func BuildTerraformConfigWithLabel(label string, key string, value string) string {
 	return fmt.Sprintf(`
 resource "akc_key_value" "test" {
-  endpoint     = "https://testlg.azconfig.io"
-  key = "myKey"
-  value = "myValueUpdated"
+  endpoint     = "%s"
+  label = "%s"
+  key = "%s"
+  value = "%s"
 }
-`)
-}
-
-func BuildTerraformConfigWithLabel() string {
-	return fmt.Sprintf(`
-resource "akc_key_value" "test" {
-  endpoint     = "https://testlg.azconfig.io"
-  key = "myKey"
-  value = "myValue"
-  label = "myLabel"
-}
-`)
-}
-
-// BuildTerraformConfigUpdateValue build terraform config
-func BuildTerraformConfigUpdateValueWithLabel() string {
-	return fmt.Sprintf(`
-resource "akc_key_value" "test" {
-  endpoint     = "https://testlg.azconfig.io"
-  key = "myKey"
-  value = "myValueUpdated"
-  label = "myLabel"
-}
-`)
+`, endpointUnderTest, label, key, value)
 }

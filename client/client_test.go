@@ -4,171 +4,90 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-const uri = "https://testlg.azconfig.io"
-
-func TestGetKeyValueDoesntExistShouldFail(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "fdgdfgdsfgdsfgsdgfds"
-
-	_, err := client.GetKeyValue(key)
-
-	assert.Equal(t, kVError("%00", key, "Not found"), err)
+func TestNonExistingKeyValueTestSuite(t *testing.T) {
+	suiteTester := new(nonExistingKeyValueWithLabelTestSuite)
+	suite.Run(t, suiteTester)
 }
 
-func TestCreateKeyValueWithoutLabelShouldPass(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "myKey"
-	const value = "myValue"
-
-	result, err := client.SetKeyValue(key, value)
-	assert.Nil(nil, err)
-
-	assert.Equal(t, key, result.Key)
-	assert.Equal(t, value, result.Value)
-	assert.Equal(t, "", result.Label)
+type nonExistingKeyValueWithLabelTestSuite struct {
+	suite.Suite
+	uri    string
+	label  string
+	key    string
+	value  string
+	client *AppConfigClient
 }
 
-func TestCreateKeyValueWithLabelShouldPass(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "myKey"
-	const value = "myValue"
-	const label = "myLabel"
-
-	result, err := client.SetKeyValueWithLabel(key, value, label)
-	assert.Nil(nil, err)
-
-	assert.Equal(t, key, result.Key)
-	assert.Equal(t, value, result.Value)
-	assert.Equal(t, label, result.Label)
+func (s *nonExistingKeyValueWithLabelTestSuite) SetupSuite() {
+	s.uri = "https://testlg.azconfig.io"
+	s.client = NewAppConfigurationClient(s.uri)
 }
 
-func TestCreateAndGetKeyValueWithoutLabelShouldPass(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "myKey"
-	const value = "myValue"
-
-	result, err := client.SetKeyValue(key, value)
-	assert.Nil(nil, err)
-
-	result, err = client.GetKeyValue(key)
-	assert.Nil(nil, err)
-
-	assert.Equal(t, key, result.Key)
-	assert.Equal(t, value, result.Value)
-	assert.Equal(t, "", result.Label)
+func (s *nonExistingKeyValueWithLabelTestSuite) SetupTest() {
+	s.key = "myKey"
+	s.value = "myValue"
+	s.label = "myLabel"
 }
 
-func TestCreateAndDeleteKeyValueShouldPass(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "myKey"
-	const value = "myValue"
+func (s *nonExistingKeyValueWithLabelTestSuite) TearDownTest() {
+	_, err := s.client.DeleteKeyValue(s.key)
 
-	_, err := client.SetKeyValue(key, value)
-	assert.Nil(nil, err)
+	if err != nil {
+		panic("Cannot delete test key-value with label")
+	}
 
-	isDeleted, err := client.DeleteKeyValue(key)
-	assert.Nil(nil, err)
+	_, err = s.client.DeleteKeyValueWithLabel(s.key, s.label)
 
-	assert.True(t, isDeleted)
+	if err != nil {
+		panic("Cannot delete test key-value with label")
+	}
 }
 
-func TestDeleteKeyValueDoesNotExistShouldPass(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
+func (s *nonExistingKeyValueWithLabelTestSuite) TestGetKeyValueDoesntExistShouldFail() {
+	_, err := s.client.GetKeyValue(s.key)
 
-	isDeleted, err := client.DeleteKeyValue("dfqdsgmlmlmdfsd")
-	assert.Nil(nil, err)
-
-	assert.False(t, isDeleted)
+	assert.EqualError(s.T(), KVNotFoundError, err.Error())
+	assert.Equal(s.T(), s.key, err.(AppConfigClientError).Info)
 }
 
-func TestGetKeyValueWithLabelDoesntExistShouldFail(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "fdgdfgdsfgdsfgsdgfds"
-	const label = "mmlmlmlmlmlmsdsqdsqd"
+func (s *nonExistingKeyValueWithLabelTestSuite) TestGetKeyValueWithLabelDoesntExistShouldFail() {
+	_, err := s.client.GetKeyValueWithLabel(s.key, s.label)
 
-	_, err := client.GetKeyValueWithLabel(key, label)
-
-	assert.Equal(t, kVError(label, key, "Not found"), err)
+	assert.EqualError(s.T(), KVNotFoundError, err.Error())
+	assert.Equal(s.T(), s.key, err.(AppConfigClientError).Info)
 }
 
-func TestGetKeyValueWithLabelShouldRespectLabel(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "myKey"
-	const label = "myLabel"
-	const value = "myValue"
+func (s *nonExistingKeyValueWithLabelTestSuite) TestCreateKeyValueWithoutLabelShouldPass() {
+	result, err := s.client.SetKeyValue(s.key, s.value)
+	assert.Nil(s.T(), err)
 
-	_, err := client.SetKeyValueWithLabel(key, value, label)
-	assert.Nil(nil, err)
-
-	_, err = client.GetKeyValue(key)
-
-	assert.Equal(t, kVError("%00", key, "Not found"), err)
+	assert.Equal(s.T(), s.key, result.Key)
+	assert.Equal(s.T(), s.value, result.Value)
+	assert.Equal(s.T(), "", result.Label)
 }
 
-func TestGetKeyValueWithLabelShouldPass(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "myKey"
-	const label = "myLabel"
-	const value = "myValue"
+func (s *nonExistingKeyValueWithLabelTestSuite) TestCreateKeyValueWithLabelShouldPass() {
+	result, err := s.client.SetKeyValueWithLabel(s.key, s.value, s.label)
+	assert.Nil(s.T(), err)
 
-	_, err := client.SetKeyValueWithLabel(key, value, label)
-	assert.Nil(nil, err)
-
-	result, err := client.GetKeyValueWithLabel(key, label)
-	assert.Nil(nil, err)
-
-	assert.Equal(t, key, result.Key)
-	assert.Equal(t, value, result.Value)
-	assert.Equal(t, label, result.Label)
+	assert.Equal(s.T(), s.key, result.Key)
+	assert.Equal(s.T(), s.value, result.Value)
+	assert.Equal(s.T(), s.label, result.Label)
 }
 
-func TestDeleteKeyValueWithLabelShouldDeleteConcernedOnly(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "myKey"
-	const label = "myLabel"
-	const value = "myValue"
+func (s *nonExistingKeyValueWithLabelTestSuite) TestDeleteKeyValueDoesNotExistShouldPass() {
+	isDeleted, err := s.client.DeleteKeyValue(s.key)
+	assert.Nil(s.T(), err)
 
-	_, err := client.SetKeyValueWithLabel(key, value, label)
-	assert.Nil(nil, err)
-
-	_, err = client.SetKeyValueWithLabel(key, value, "otherLabel")
-	assert.Nil(nil, err)
-
-	isDeleted, err := client.DeleteKeyValueWithLabel(key, label)
-	assert.Nil(nil, err)
-	assert.True(t, isDeleted)
-
-	_, err = client.GetKeyValueWithLabel(key, "otherLabel")
-	assert.Nil(nil, err)
+	assert.False(s.T(), isDeleted)
 }
 
-func TestDeleteKeyValueWithLabelShouldPass(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "myKey"
-	const label = "myLabel"
-	const value = "myValue"
+func (s *nonExistingKeyValueWithLabelTestSuite) TestDeleteKeyValueWithLabelDoesNotExistShouldPass() {
+	isDeleted, err := s.client.DeleteKeyValueWithLabel(s.key, s.label)
+	assert.Nil(s.T(), err)
 
-	_, err := client.SetKeyValueWithLabel(key, value, label)
-	assert.Nil(nil, err)
-
-	isDeleted, err := client.DeleteKeyValueWithLabel(key, label)
-	assert.Nil(nil, err)
-	assert.True(t, isDeleted)
-
-	_, err = client.GetKeyValueWithLabel(key, label)
-	assert.NotNil(nil, err)
-}
-
-func TestGetKeyValueWithoutLabelShouldPass(t *testing.T) {
-	client := NewAppConfigurationClient(uri)
-	const key = "myKey"
-	const value = "myValue"
-
-	_, err := client.SetKeyValue(key, value)
-	assert.Nil(nil, err)
-
-	_, err = client.GetKeyValue(key)
-	assert.Nil(nil, err)
+	assert.False(s.T(), isDeleted)
 }
