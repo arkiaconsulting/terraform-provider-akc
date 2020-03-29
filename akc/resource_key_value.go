@@ -45,12 +45,12 @@ func resourceKeyValue() *schema.Resource {
 
 func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 	endpoint := d.Get("endpoint").(string)
-	client := client.NewAppConfigurationClient(endpoint)
+	client, err := client.NewAppConfigurationClient(endpoint)
 	key := d.Get("key").(string)
 	value := d.Get("value").(string)
 	label := d.Get("label").(string)
 
-	_, err := client.SetKeyValueWithLabel(key, value, label)
+	_, err = client.SetKeyValueWithLabel(key, value, label)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 	log.Print("[INFO] Reading...")
 
 	endpoint, label, key := parseID(d.Id())
-	client := client.NewAppConfigurationClient(endpoint)
+	client, err := client.NewAppConfigurationClient(endpoint)
 
 	result, err := client.GetKeyValueWithLabel(key, label)
 	if err != nil {
@@ -96,10 +96,10 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 
 func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 	endpoint, label, key := parseID(d.Id())
-	client := client.NewAppConfigurationClient(endpoint)
+	client, err := client.NewAppConfigurationClient(endpoint)
 	value := d.Get("value").(string)
 
-	_, err := client.SetKeyValueWithLabel(key, value, label)
+	_, err = client.SetKeyValueWithLabel(key, value, label)
 	if err != nil {
 		return err
 	}
@@ -117,21 +117,22 @@ func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 	endpoint, label, key := parseID(d.Id())
 
-	client := client.NewAppConfigurationClient(endpoint)
+	client, err := client.NewAppConfigurationClient(endpoint)
 
-	_, err := client.DeleteKeyValueWithLabel(key, label)
+	_, err = client.DeleteKeyValueWithLabel(key, label)
 	if err != nil {
 		return err
 	}
 
+	d.SetId("")
 	return nil
 }
 
 func resourceKeyValueExists(d *schema.ResourceData, m interface{}) (bool, error) {
 	endpoint, label, key := parseID(d.Id())
-	client := client.NewAppConfigurationClient(endpoint)
+	client, err := client.NewAppConfigurationClient(endpoint)
 
-	_, err := client.GetKeyValueWithLabel(key, label)
+	_, err = client.GetKeyValueWithLabel(key, label)
 	if err != nil {
 		return false, err
 	}

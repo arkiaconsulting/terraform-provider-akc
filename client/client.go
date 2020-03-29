@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -20,14 +21,31 @@ type setKeyValuePayload struct {
 }
 
 // NewAppConfigurationClient instantiate a new client
-func NewAppConfigurationClient(appConfigURI string) *AppConfigClient {
+func NewAppConfigurationClient(appConfigURI string) (*AppConfigClient, error) {
 	client := autorest.NewClientWithUserAgent(userAgent())
-	client.Authorizer, _ = auth.NewAuthorizerFromEnvironmentWithResource(appConfigURI)
+	authorizer, err := getAuthorizer(appConfigURI)
+	if err != nil {
+		return nil, err
+	}
+
+	client.Authorizer = authorizer
 
 	return &AppConfigClient{
 		Client:       &client,
 		AppConfigURI: appConfigURI,
+	}, nil
+}
+
+func getAuthorizer(resource string) (autorest.Authorizer, error) {
+	authorizer, err := auth.NewAuthorizerFromCLIWithResource(resource)
+	if err != nil {
+		authorizer, err = auth.NewAuthorizerFromEnvironmentWithResource(resource)
+		if err != nil {
+			return nil, fmt.Errorf("Unable to find a suitable authorizer")
+		}
 	}
+
+	return authorizer, nil
 }
 
 func (client *AppConfigClient) getPreparer(label string, key string, additionalDecorators ...autorest.PrepareDecorator) autorest.Preparer {
@@ -68,7 +86,7 @@ func (client *AppConfigClient) GetKeyValueWithLabel(key string, label string) (K
 	)
 
 	if err != nil {
-		return result, UnexpectedError.wrap(err)
+		return result, err
 	}
 
 	if utils.ResponseWasNotFound(resp) {
@@ -102,7 +120,11 @@ func (client *AppConfigClient) SetKeyValueWithLabel(key string, value string, la
 		autorest.WithJSON(payload),
 	)
 	if err != nil {
-		return result, UnexpectedError.wrap(err)
+		return result, err
+	}
+
+	if utils.ResponseWasStatusCode(resp, http.StatusForbidden) {
+		return result, UnexpectedError.wrap(fmt.Errorf("Forbidden"))
 	}
 
 	err = getJSON(resp, &result)
@@ -126,7 +148,7 @@ func (client *AppConfigClient) DeleteKeyValueWithLabel(key string, label string)
 		autorest.AsDelete(),
 	)
 	if err != nil {
-		return false, UnexpectedError.wrap(err)
+		return false, err
 	}
 
 	if resp.StatusCode == http.StatusNoContent {
@@ -164,6 +186,18 @@ func (client *AppConfigClient) send(label string, key string, additionalDecorato
 	resp, err := client.Send(req)
 	if err != nil {
 		return nil, UnexpectedError.wrap(err)
+	}
+
+	if utils.ResponseWasThrottled(resp) {
+		return nil, UnexpectedError.with("Requests are throttled")
+	}
+
+	if utils.ResponseWasForbidden(resp) {
+		return nil, UnexpectedError.with("Forbidden")
+	}
+
+	if utils.ResponseWasUnauthorized(resp) {
+		return nil, UnexpectedError.with("Unauthorized")
 	}
 
 	return resp, err

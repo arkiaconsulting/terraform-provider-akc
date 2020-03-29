@@ -248,11 +248,14 @@ func testKeyValueDestroy(state *terraform.State) error {
 		endpoint := rs.Primary.Attributes["endpoint"]
 		log.Printf("[INFO] Checking that KV is destroyed %s/%s/%s", endpoint, label, key)
 
-		cl := client.NewAppConfigurationClient(endpoint)
+		cl, err := client.NewAppConfigurationClient(endpoint)
+		if err != nil {
+			panic(err)
+		}
 
-		_, err := cl.GetKeyValueWithLabel(key, label)
+		_, err = cl.GetKeyValueWithLabel(key, label)
 
-		if !errors.Is(err, client.KVNotFoundError) {
+		if !errors.Is(err, client.AppConfigClientError{Message: client.KVNotFoundError.Message, Info: key}) {
 			return fmt.Errorf("expected %s, got %s", client.KVNotFoundError, err)
 		}
 
@@ -278,7 +281,10 @@ func testCheckKeyValueExists(resource string) resource.TestCheckFunc {
 		key := rs.Primary.Attributes["key"]
 		value := rs.Primary.Attributes["value"]
 		label := rs.Primary.Attributes["label"]
-		cl := client.NewAppConfigurationClient(endpoint)
+		cl, err := client.NewAppConfigurationClient(endpoint)
+		if err != nil {
+			panic(err)
+		}
 
 		result, err := cl.GetKeyValueWithLabel(key, label)
 		if errors.Is(err, client.KVNotFoundError) {

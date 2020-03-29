@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -22,7 +23,13 @@ type existingKeyValueTestSuite struct {
 
 func (s *existingKeyValueTestSuite) SetupSuite() {
 	s.uri = "https://testlg.azconfig.io"
-	s.client = NewAppConfigurationClient(s.uri)
+	client, err := NewAppConfigurationClient(s.uri)
+
+	if err != nil {
+		panic(err)
+	}
+
+	s.client = client
 }
 
 func (s *existingKeyValueTestSuite) SetupTest() {
@@ -46,8 +53,8 @@ func (s *existingKeyValueTestSuite) TearDownTest() {
 
 func (s *existingKeyValueTestSuite) TestGetExistingKeyValueWithoutLabelShouldPass() {
 	result, err := s.client.GetKeyValue(s.key)
-	assert.Nil(s.T(), err)
 
+	require.Nil(s.T(), err)
 	assert.Equal(s.T(), s.key, result.Key)
 	assert.Equal(s.T(), s.value, result.Value)
 	assert.Equal(s.T(), "", result.Label)
@@ -55,7 +62,7 @@ func (s *existingKeyValueTestSuite) TestGetExistingKeyValueWithoutLabelShouldPas
 
 func (s *existingKeyValueTestSuite) TestDeleteExistingKeyValueWithoutLabelShouldPass() {
 	isDeleted, err := s.client.DeleteKeyValue(s.key)
-	assert.Nil(s.T(), err)
 
+	require.Nil(s.T(), err)
 	assert.True(s.T(), isDeleted)
 }

@@ -20,9 +20,9 @@ type AppConfigClientError struct {
 
 func (err AppConfigClientError) Error() string {
 	if err.Err != nil {
-		return fmt.Sprintf("%s: %v", err.Message, err.Err)
+		return fmt.Sprintf("%s (%s): %v", err.Message, err.Info, err.Err.Error())
 	}
-	return err.Message
+	return fmt.Sprintf("%s (%s)", err.Message, err.Info)
 }
 func (err AppConfigClientError) wrap(inner error) error {
 	return AppConfigClientError{Message: err.Message, Err: inner}

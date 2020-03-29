@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -23,7 +24,13 @@ type nonExistingKeyValueWithLabelTestSuite struct {
 
 func (s *nonExistingKeyValueWithLabelTestSuite) SetupSuite() {
 	s.uri = "https://testlg.azconfig.io"
-	s.client = NewAppConfigurationClient(s.uri)
+	client, err := NewAppConfigurationClient(s.uri)
+
+	if err != nil {
+		panic(err)
+	}
+
+	s.client = client
 }
 
 func (s *nonExistingKeyValueWithLabelTestSuite) SetupTest() {
@@ -49,21 +56,19 @@ func (s *nonExistingKeyValueWithLabelTestSuite) TearDownTest() {
 func (s *nonExistingKeyValueWithLabelTestSuite) TestGetKeyValueDoesntExistShouldFail() {
 	_, err := s.client.GetKeyValue(s.key)
 
-	assert.EqualError(s.T(), KVNotFoundError, err.Error())
-	assert.Equal(s.T(), s.key, err.(AppConfigClientError).Info)
+	require.EqualError(s.T(), err, AppConfigClientError{Message: KVNotFoundError.Message, Info: s.key}.Error())
 }
 
 func (s *nonExistingKeyValueWithLabelTestSuite) TestGetKeyValueWithLabelDoesntExistShouldFail() {
 	_, err := s.client.GetKeyValueWithLabel(s.key, s.label)
 
-	assert.EqualError(s.T(), KVNotFoundError, err.Error())
-	assert.Equal(s.T(), s.key, err.(AppConfigClientError).Info)
+	require.EqualError(s.T(), err, AppConfigClientError{Message: KVNotFoundError.Message, Info: s.key}.Error())
 }
 
 func (s *nonExistingKeyValueWithLabelTestSuite) TestCreateKeyValueWithoutLabelShouldPass() {
 	result, err := s.client.SetKeyValue(s.key, s.value)
-	assert.Nil(s.T(), err)
 
+	require.Nil(s.T(), err)
 	assert.Equal(s.T(), s.key, result.Key)
 	assert.Equal(s.T(), s.value, result.Value)
 	assert.Equal(s.T(), "", result.Label)
@@ -71,8 +76,8 @@ func (s *nonExistingKeyValueWithLabelTestSuite) TestCreateKeyValueWithoutLabelSh
 
 func (s *nonExistingKeyValueWithLabelTestSuite) TestCreateKeyValueWithLabelShouldPass() {
 	result, err := s.client.SetKeyValueWithLabel(s.key, s.value, s.label)
-	assert.Nil(s.T(), err)
 
+	require.Nil(s.T(), err)
 	assert.Equal(s.T(), s.key, result.Key)
 	assert.Equal(s.T(), s.value, result.Value)
 	assert.Equal(s.T(), s.label, result.Label)
@@ -80,14 +85,14 @@ func (s *nonExistingKeyValueWithLabelTestSuite) TestCreateKeyValueWithLabelShoul
 
 func (s *nonExistingKeyValueWithLabelTestSuite) TestDeleteKeyValueDoesNotExistShouldPass() {
 	isDeleted, err := s.client.DeleteKeyValue(s.key)
-	assert.Nil(s.T(), err)
 
+	require.Nil(s.T(), err)
 	assert.False(s.T(), isDeleted)
 }
 
 func (s *nonExistingKeyValueWithLabelTestSuite) TestDeleteKeyValueWithLabelDoesNotExistShouldPass() {
 	isDeleted, err := s.client.DeleteKeyValueWithLabel(s.key, s.label)
-	assert.Nil(s.T(), err)
 
+	require.Nil(s.T(), err)
 	assert.False(s.T(), isDeleted)
 }
