@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,11 +16,12 @@ func TestNonExistingKeyValueTestSuite(t *testing.T) {
 
 type nonExistingKeyValueWithLabelTestSuite struct {
 	suite.Suite
-	uri    string
-	label  string
-	key    string
-	value  string
-	client *AppConfigClient
+	uri       string
+	label     string
+	key       string
+	value     string
+	secretURI string
+	client    *AppConfigClient
 }
 
 func (s *nonExistingKeyValueWithLabelTestSuite) SetupSuite() {
@@ -37,6 +39,7 @@ func (s *nonExistingKeyValueWithLabelTestSuite) SetupTest() {
 	s.key = "myKey"
 	s.value = "myValue"
 	s.label = "myLabel"
+	s.secretURI = "https://testlg.vault.azure.net/secrets/my-secret"
 }
 
 func (s *nonExistingKeyValueWithLabelTestSuite) TearDownTest() {
@@ -95,4 +98,13 @@ func (s *nonExistingKeyValueWithLabelTestSuite) TestDeleteKeyValueWithLabelDoesN
 
 	require.Nil(s.T(), err)
 	assert.False(s.T(), isDeleted)
+}
+
+func (s *nonExistingKeyValueWithLabelTestSuite) TestCreateKeyValueSecretShouldPass() {
+	result, err := s.client.SetKeyValueSecret(s.key, s.secretURI, LabelNone)
+
+	require.Nil(s.T(), err)
+	assert.Equal(s.T(), s.key, result.Key)
+	assert.Equal(s.T(), fmt.Sprintf("{\"uri\":\"%s\"}", s.secretURI), result.Value)
+	assert.Equal(s.T(), "", result.Label)
 }

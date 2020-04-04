@@ -69,3 +69,14 @@ resource "akc_key_value" "test" {
 }
 `, endpointUnderTest, label, key, value)
 }
+
+func BuildTerraformConfigSecret(label string, key string, secretID string) string {
+	return fmt.Sprintf(`
+resource "akc_key_secret" "test" {
+  endpoint     = "%s"
+  label = "%s"
+  key = "%s"
+  secret_id = "%s"
+}
+`, endpointUnderTest, label, key, secretID)
+}

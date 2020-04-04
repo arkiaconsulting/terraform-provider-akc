@@ -10,6 +10,16 @@ import (
 	"github.com/arkiaconsulting/terraform-provider-akc/utils"
 )
 
+var (
+	// LabelNone Represents an empty label
+	LabelNone = "%00"
+)
+
+var (
+	defaultContentType     = "application/vnd.microsoft.appconfig.kv+json"
+	keyVaultRefContentType = "application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8"
+)
+
 // AppConfigClient holds all of the information required to connect to a server
 type AppConfigClient struct {
 	*autorest.Client
@@ -17,7 +27,8 @@ type AppConfigClient struct {
 }
 
 type setKeyValuePayload struct {
-	Value string
+	Value       string
+	ContentType string `json:"content_type"`
 }
 
 // NewAppConfigurationClient instantiate a new client
@@ -107,9 +118,20 @@ func (client *AppConfigClient) SetKeyValue(key string, value string) (KeyValueRe
 
 // SetKeyValueWithLabel creates a key with the given value and label
 func (client *AppConfigClient) SetKeyValueWithLabel(key string, value string, label string) (KeyValueResponse, error) {
+	return client.setKeyValue(label, key, value, defaultContentType)
+}
+
+// SetKeyValueSecret creates a key with the given KeyVault secret ID
+func (client *AppConfigClient) SetKeyValueSecret(key string, secretID string, label string) (KeyValueResponse, error) {
+	value := fmt.Sprintf("{\"uri\":\"%s\"}", secretID)
+	return client.setKeyValue(label, key, value, keyVaultRefContentType)
+}
+
+func (client *AppConfigClient) setKeyValue(label string, key string, value string, contentType string) (KeyValueResponse, error) {
 	result := KeyValueResponse{}
 	payload := setKeyValuePayload{
-		Value: value,
+		Value:       value,
+		ContentType: contentType,
 	}
 
 	resp, err := client.send(
