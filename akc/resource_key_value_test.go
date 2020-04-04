@@ -26,7 +26,7 @@ func TestAccCreateKeyValue(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
-					resource.TestCheckResourceAttr("akc_key_value.test", "label", "%00"),
+					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
 				),
@@ -74,7 +74,7 @@ func TestAccUpdateKeyValueValue(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
-					resource.TestCheckResourceAttr("akc_key_value.test", "label", "%00"),
+					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
 				),
@@ -84,7 +84,7 @@ func TestAccUpdateKeyValueValue(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
-					resource.TestCheckResourceAttr("akc_key_value.test", "label", "%00"),
+					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", newValue),
 				),
@@ -108,7 +108,7 @@ func TestAccUpdateKeyValueKey(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
-					resource.TestCheckResourceAttr("akc_key_value.test", "label", "%00"),
+					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
 				),
@@ -118,7 +118,7 @@ func TestAccUpdateKeyValueKey(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
-					resource.TestCheckResourceAttr("akc_key_value.test", "label", "%00"),
+					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", newKey),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
 				),
@@ -253,7 +253,7 @@ func testKeyValueDestroy(state *terraform.State) error {
 			panic(err)
 		}
 
-		_, err = cl.GetKeyValueWithLabel(key, label)
+		_, err = cl.GetKeyValue(label, key)
 
 		if !errors.Is(err, client.AppConfigClientError{Message: client.KVNotFoundError.Message, Info: key}) {
 			return fmt.Errorf("expected %s, got %s", client.KVNotFoundError, err)
@@ -286,7 +286,7 @@ func testCheckKeyValueExists(resource string) resource.TestCheckFunc {
 			panic(err)
 		}
 
-		result, err := cl.GetKeyValueWithLabel(key, label)
+		result, err := cl.GetKeyValue(label, key)
 		if errors.Is(err, client.KVNotFoundError) {
 			return fmt.Errorf("Cannot find resource %s", resource)
 		}

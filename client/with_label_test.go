@@ -38,7 +38,7 @@ func (s *existingKeyValueWithLabelTestSuite) SetupTest() {
 	s.value = "myValue"
 	s.label = "myLabel"
 
-	_, err := s.client.SetKeyValueWithLabel(s.key, s.value, s.label)
+	_, err := s.client.SetKeyValue(s.label, s.key, s.value)
 
 	if err != nil {
 		panic("Cannot create test key-value with label")
@@ -46,7 +46,7 @@ func (s *existingKeyValueWithLabelTestSuite) SetupTest() {
 }
 
 func (s *existingKeyValueWithLabelTestSuite) TearDownTest() {
-	_, err := s.client.DeleteKeyValueWithLabel(s.key, s.label)
+	_, err := s.client.DeleteKeyValue(s.label, s.key)
 
 	if err != nil {
 		panic("Cannot delete test key-value with label")
@@ -54,19 +54,19 @@ func (s *existingKeyValueWithLabelTestSuite) TearDownTest() {
 }
 
 func (s *existingKeyValueWithLabelTestSuite) TestGetKeyValueWithLabelShouldRespectLabel() {
-	_, err := s.client.GetKeyValue(s.key)
+	_, err := s.client.GetKeyValue(LabelNone, s.key)
 
 	require.NotNil(s.T(), err)
 	require.EqualError(s.T(), err, AppConfigClientError{Message: KVNotFoundError.Message, Info: s.key}.Error())
 
-	_, err = s.client.GetKeyValueWithLabel(s.key, "anyOtherLabel")
+	_, err = s.client.GetKeyValue("anyOtherLabel", s.key)
 
 	require.NotNil(s.T(), err)
 	require.EqualError(s.T(), err, AppConfigClientError{Message: KVNotFoundError.Message, Info: s.key}.Error())
 }
 
 func (s *existingKeyValueWithLabelTestSuite) TestGetKeyValueWithLabelShouldPass() {
-	result, err := s.client.GetKeyValueWithLabel(s.key, s.label)
+	result, err := s.client.GetKeyValue(s.label, s.key)
 
 	require.Nil(s.T(), err)
 	assert.Equal(s.T(), s.key, result.Key)
@@ -75,24 +75,24 @@ func (s *existingKeyValueWithLabelTestSuite) TestGetKeyValueWithLabelShouldPass(
 }
 
 func (s *existingKeyValueWithLabelTestSuite) TestDeleteKeyValueWithLabelShouldDeleteConcernedOnly() {
-	_, err := s.client.SetKeyValueWithLabel(s.key, s.value, "otherLabel")
+	_, err := s.client.SetKeyValue("otherLabel", s.key, s.value)
 
 	require.Nil(s.T(), err)
 
-	isDeleted, err := s.client.DeleteKeyValueWithLabel(s.key, s.label)
+	isDeleted, err := s.client.DeleteKeyValue(s.label, s.key)
 	require.Nil(s.T(), err)
 	assert.True(s.T(), isDeleted)
 
-	_, err = s.client.GetKeyValueWithLabel(s.key, "otherLabel")
+	_, err = s.client.GetKeyValue("otherLabel", s.key)
 	require.Nil(s.T(), err)
 }
 
 func (s *existingKeyValueWithLabelTestSuite) TestDeleteKeyValueWithLabelShouldPass() {
-	isDeleted, err := s.client.DeleteKeyValueWithLabel(s.key, s.label)
+	isDeleted, err := s.client.DeleteKeyValue(s.label, s.key)
 
 	require.Nil(s.T(), err)
 	assert.True(s.T(), isDeleted)
 
-	_, err = s.client.GetKeyValueWithLabel(s.key, s.label)
+	_, err = s.client.GetKeyValue(s.label, s.key)
 	require.NotNil(s.T(), err)
 }

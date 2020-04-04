@@ -36,7 +36,7 @@ func resourceKeyValue() *schema.Resource {
 			"label": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
-				Default:  "%00",
+				Default:  client.LabelNone,
 				ForceNew: true,
 			},
 		},
@@ -45,12 +45,12 @@ func resourceKeyValue() *schema.Resource {
 
 func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 	endpoint := d.Get("endpoint").(string)
-	client, err := client.NewAppConfigurationClient(endpoint)
+	cl, err := client.NewAppConfigurationClient(endpoint)
 	key := d.Get("key").(string)
 	value := d.Get("value").(string)
 	label := d.Get("label").(string)
 
-	_, err = client.SetKeyValueWithLabel(key, value, label)
+	_, err = cl.SetKeyValue(label, key, value)
 	if err != nil {
 		return err
 	}
@@ -69,9 +69,9 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 	log.Print("[INFO] Reading...")
 
 	endpoint, label, key := parseID(d.Id())
-	client, err := client.NewAppConfigurationClient(endpoint)
+	cl, err := client.NewAppConfigurationClient(endpoint)
 
-	result, err := client.GetKeyValueWithLabel(key, label)
+	result, err := cl.GetKeyValue(label, key)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 	}
 
 	if result.Label == "" {
-		result.Label = "%00"
+		result.Label = client.LabelNone
 	}
 
 	d.SetId(id)
@@ -96,10 +96,10 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 
 func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 	endpoint, label, key := parseID(d.Id())
-	client, err := client.NewAppConfigurationClient(endpoint)
+	cl, err := client.NewAppConfigurationClient(endpoint)
 	value := d.Get("value").(string)
 
-	_, err = client.SetKeyValueWithLabel(key, value, label)
+	_, err = cl.SetKeyValue(label, key, value)
 	if err != nil {
 		return err
 	}
@@ -117,9 +117,9 @@ func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 	endpoint, label, key := parseID(d.Id())
 
-	client, err := client.NewAppConfigurationClient(endpoint)
+	cl, err := client.NewAppConfigurationClient(endpoint)
 
-	_, err = client.DeleteKeyValueWithLabel(key, label)
+	_, err = cl.DeleteKeyValue(label, key)
 	if err != nil {
 		return err
 	}
@@ -130,9 +130,9 @@ func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 
 func resourceKeyValueExists(d *schema.ResourceData, m interface{}) (bool, error) {
 	endpoint, label, key := parseID(d.Id())
-	client, err := client.NewAppConfigurationClient(endpoint)
+	cl, err := client.NewAppConfigurationClient(endpoint)
 
-	_, err = client.GetKeyValueWithLabel(key, label)
+	_, err = cl.GetKeyValue(label, key)
 	if err != nil {
 		return false, err
 	}

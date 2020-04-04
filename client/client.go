@@ -47,48 +47,8 @@ func NewAppConfigurationClient(appConfigURI string) (*AppConfigClient, error) {
 	}, nil
 }
 
-func getAuthorizer(resource string) (autorest.Authorizer, error) {
-	authorizer, err := auth.NewAuthorizerFromCLIWithResource(resource)
-	if err != nil {
-		authorizer, err = auth.NewAuthorizerFromEnvironmentWithResource(resource)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to find a suitable authorizer")
-		}
-	}
-
-	return authorizer, nil
-}
-
-func (client *AppConfigClient) getPreparer(label string, key string, additionalDecorators ...autorest.PrepareDecorator) autorest.Preparer {
-	const apiVersion = "1.0"
-	queryParameters := map[string]interface{}{
-		"label":       label,
-		"api-version": apiVersion,
-	}
-
-	pathParameters := map[string]interface{}{
-		"key": key,
-	}
-
-	decorators := []autorest.PrepareDecorator{
-		autorest.WithBaseURL(client.AppConfigURI),
-		autorest.WithPathParameters("/kv/{key}", pathParameters),
-		autorest.WithQueryParameters(queryParameters),
-		client.Client.WithAuthorization(),
-	}
-
-	decorators = append(decorators, additionalDecorators...)
-
-	return autorest.CreatePreparer(decorators...)
-}
-
 // GetKeyValue get a given App Configuration key-value
-func (client *AppConfigClient) GetKeyValue(key string) (KeyValueResponse, error) {
-	return client.GetKeyValueWithLabel(key, "%00")
-}
-
-// GetKeyValueWithLabel get a given App Configuration key-value with label
-func (client *AppConfigClient) GetKeyValueWithLabel(key string, label string) (KeyValueResponse, error) {
+func (client *AppConfigClient) GetKeyValue(label string, key string) (KeyValueResponse, error) {
 	result := KeyValueResponse{}
 	resp, err := client.send(
 		label,
@@ -112,12 +72,7 @@ func (client *AppConfigClient) GetKeyValueWithLabel(key string, label string) (K
 }
 
 // SetKeyValue creates a key with the given value
-func (client *AppConfigClient) SetKeyValue(key string, value string) (KeyValueResponse, error) {
-	return client.SetKeyValueWithLabel(key, value, "%00")
-}
-
-// SetKeyValueWithLabel creates a key with the given value and label
-func (client *AppConfigClient) SetKeyValueWithLabel(key string, value string, label string) (KeyValueResponse, error) {
+func (client *AppConfigClient) SetKeyValue(label string, key string, value string) (KeyValueResponse, error) {
 	return client.setKeyValue(label, key, value, defaultContentType)
 }
 
@@ -137,7 +92,7 @@ func (client *AppConfigClient) setKeyValue(label string, key string, value strin
 	resp, err := client.send(
 		label,
 		key,
-		autorest.AsContentType("application/vnd.microsoft.appconfig.kv+json"),
+		autorest.AsContentType(defaultContentType),
 		autorest.AsPut(),
 		autorest.WithJSON(payload),
 	)
@@ -158,12 +113,7 @@ func (client *AppConfigClient) setKeyValue(label string, key string, value strin
 }
 
 // DeleteKeyValue get a given App Configuration key-value
-func (client *AppConfigClient) DeleteKeyValue(key string) (bool, error) {
-	return client.DeleteKeyValueWithLabel(key, "%00")
-}
-
-// DeleteKeyValueWithLabel get a given App Configuration key-value with label
-func (client *AppConfigClient) DeleteKeyValueWithLabel(key string, label string) (bool, error) {
+func (client *AppConfigClient) DeleteKeyValue(label string, key string) (bool, error) {
 	resp, err := client.send(
 		label,
 		key,
@@ -223,4 +173,39 @@ func (client *AppConfigClient) send(label string, key string, additionalDecorato
 	}
 
 	return resp, err
+}
+
+func getAuthorizer(resource string) (autorest.Authorizer, error) {
+	authorizer, err := auth.NewAuthorizerFromCLIWithResource(resource)
+	if err != nil {
+		authorizer, err = auth.NewAuthorizerFromEnvironmentWithResource(resource)
+		if err != nil {
+			return nil, fmt.Errorf("Unable to find a suitable authorizer")
+		}
+	}
+
+	return authorizer, nil
+}
+
+func (client *AppConfigClient) getPreparer(label string, key string, additionalDecorators ...autorest.PrepareDecorator) autorest.Preparer {
+	const apiVersion = "1.0"
+	queryParameters := map[string]interface{}{
+		"label":       label,
+		"api-version": apiVersion,
+	}
+
+	pathParameters := map[string]interface{}{
+		"key": key,
+	}
+
+	decorators := []autorest.PrepareDecorator{
+		autorest.WithBaseURL(client.AppConfigURI),
+		autorest.WithPathParameters("/kv/{key}", pathParameters),
+		autorest.WithQueryParameters(queryParameters),
+		client.Client.WithAuthorization(),
+	}
+
+	decorators = append(decorators, additionalDecorators...)
+
+	return autorest.CreatePreparer(decorators...)
 }

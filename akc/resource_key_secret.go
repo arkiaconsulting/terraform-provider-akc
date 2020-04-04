@@ -31,7 +31,7 @@ func resourceKeySecret() *schema.Resource {
 			"label": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
-				Default:  "%00",
+				Default:  client.LabelNone,
 				ForceNew: true,
 			},
 		},

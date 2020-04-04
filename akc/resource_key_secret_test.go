@@ -166,7 +166,7 @@ func testCheckKeyValueSecretExists(resource string) resource.TestCheckFunc {
 			panic(err)
 		}
 
-		result, err := cl.GetKeyValueWithLabel(key, label)
+		result, err := cl.GetKeyValue(label, key)
 		if errors.Is(err, client.KVNotFoundError) {
 			return fmt.Errorf("Cannot find resource %s", resource)
 		}
