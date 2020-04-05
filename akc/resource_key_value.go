@@ -66,7 +66,6 @@ func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
-	log.Print("[INFO] Reading...")
 
 	endpoint, label, key := parseID(d.Id())
 	cl, err := client.NewAppConfigurationClient(endpoint)
@@ -76,16 +75,10 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 		return err
 	}
 
-	id, err := formatID(endpoint, label, key)
-	if err != nil {
-		return err
-	}
-
 	if result.Label == "" {
 		result.Label = client.LabelNone
 	}
 
-	d.SetId(id)
 	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("value", result.Value)
