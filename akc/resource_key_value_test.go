@@ -11,6 +11,7 @@ import (
 func TestAccCreateKeyValue(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
+	var kv client.KeyValueResponse
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
@@ -20,11 +21,12 @@ func TestAccCreateKeyValue(t *testing.T) {
 			{
 				Config: buildTerraformConfigWithoutLabel(key, value),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 		},
@@ -35,6 +37,7 @@ func TestAccCreateKeyValueWithLabel(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
+	var kv client.KeyValueResponse
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
@@ -44,11 +47,12 @@ func TestAccCreateKeyValueWithLabel(t *testing.T) {
 			{
 				Config: buildTerraformConfigWithLabel(label, key, value),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 		},
@@ -59,6 +63,7 @@ func TestAccUpdateKeyValueValue(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	newValue := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
+	var kv client.KeyValueResponse
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
@@ -68,21 +73,23 @@ func TestAccUpdateKeyValueValue(t *testing.T) {
 			{
 				Config: buildTerraformConfigWithoutLabel(key, value),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 			{
 				Config: buildTerraformConfigWithoutLabel(key, newValue),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", newValue),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 		},
@@ -93,6 +100,7 @@ func TestAccUpdateKeyValueKey(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	newKey := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
+	var kv client.KeyValueResponse
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
@@ -102,21 +110,23 @@ func TestAccUpdateKeyValueKey(t *testing.T) {
 			{
 				Config: buildTerraformConfigWithoutLabel(key, value),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 			{
 				Config: buildTerraformConfigWithoutLabel(newKey, value),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", newKey),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 		},
@@ -128,6 +138,7 @@ func TestAccUpdateKeyValueValueWithLabel(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	newValue := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
+	var kv client.KeyValueResponse
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
@@ -137,21 +148,23 @@ func TestAccUpdateKeyValueValueWithLabel(t *testing.T) {
 			{
 				Config: buildTerraformConfigWithLabel(label, key, value),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 			{
 				Config: buildTerraformConfigWithLabel(label, key, newValue),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", newValue),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 		},
@@ -163,6 +176,7 @@ func TestAccUpdateKeyValueKeyWithLabel(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	newKey := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
+	var kv client.KeyValueResponse
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
@@ -172,21 +186,23 @@ func TestAccUpdateKeyValueKeyWithLabel(t *testing.T) {
 			{
 				Config: buildTerraformConfigWithLabel(label, key, value),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 			{
 				Config: buildTerraformConfigWithLabel(label, newKey, value),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", newKey),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 		},
@@ -198,6 +214,7 @@ func TestAccUpdateKeyValueLabelWithLabel(t *testing.T) {
 	newLabel := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
+	var kv client.KeyValueResponse
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
@@ -207,21 +224,23 @@ func TestAccUpdateKeyValueLabelWithLabel(t *testing.T) {
 			{
 				Config: buildTerraformConfigWithLabel(label, key, value),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 			{
 				Config: buildTerraformConfigWithLabel(newLabel, key, value),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckKeyValueExists("akc_key_value.test"),
+					testCheckKeyValueExists("akc_key_value.test", &kv),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", newLabel),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
+					testCheckStoredValue(&kv, value),
 				),
 			},
 		},

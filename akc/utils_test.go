@@ -109,7 +109,7 @@ func testCheckKeyValueDestroy(state *terraform.State) error {
 	return nil
 }
 
-func testCheckKeyValueExists(resource string) resource.TestCheckFunc {
+func testCheckKeyValueExists(resource string, kv *client.KeyValueResponse) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		log.Printf("[INFO] Checking that KV exist (%s)", resource)
 
@@ -143,11 +143,13 @@ func testCheckKeyValueExists(resource string) resource.TestCheckFunc {
 			return fmt.Errorf("The given key %s exists but its value does not match", key)
 		}
 
+		*kv = result
+
 		return nil
 	}
 }
 
-func testCheckKeyValueSecretExists(resource string) resource.TestCheckFunc {
+func testCheckKeyValueSecretExists(resource string, kv *client.KeyValueResponse) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		log.Printf("[INFO] Checking that KV secret exist (%s)", resource)
 
@@ -178,44 +180,41 @@ func testCheckKeyValueSecretExists(resource string) resource.TestCheckFunc {
 
 		log.Printf("[INFO] Key %s found with value %s", key, result.Value)
 
+		*kv = result
+
 		return nil
 	}
 }
 
-func testCheckStoredSecretID(resource string, expectedSecretID string) resource.TestCheckFunc {
+func testCheckStoredSecretID(kv *client.KeyValueResponse, expectedSecretID string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		log.Print("[INFO] Checking stored secret ID")
 
-		rs, ok := state.RootModule().Resources[resource]
-		if !ok {
-			return fmt.Errorf("Not found: %s", resource)
-		}
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("No Record ID is set")
-		}
-
-		endpoint := rs.Primary.Attributes["endpoint"]
-		key := rs.Primary.Attributes["key"]
-		label := rs.Primary.Attributes["label"]
-
-		cl, err := client.NewAppConfigurationClient(endpoint)
-		if err != nil {
-			panic(err)
-		}
-
-		result, err := cl.GetKeyValue(label, key)
-		if errors.Is(err, client.KVNotFoundError) {
-			return fmt.Errorf("Cannot find resource %s", resource)
-		}
-
 		var actualStoredValue keyVaultReferenceValue
-		json.Unmarshal([]byte(result.Value), &actualStoredValue)
+		err := json.Unmarshal([]byte(kv.Value), &actualStoredValue)
+		if err != nil {
+			return fmt.Errorf("Error while deserializing key-secret value")
+		}
 
 		if actualStoredValue.URI != expectedSecretID {
 			return fmt.Errorf("Stored secret ID '%s' does not match expected one '%s'", actualStoredValue.URI, expectedSecretID)
 		}
 
 		log.Printf("[INFO] Right secret ID was stored: '%s'", expectedSecretID)
+
+		return nil
+	}
+}
+
+func testCheckStoredValue(kv *client.KeyValueResponse, expectedValue string) resource.TestCheckFunc {
+	return func(state *terraform.State) error {
+		log.Print("[INFO] Checking stored value")
+
+		if kv.Value != expectedValue {
+			return fmt.Errorf("Stored value '%s' does not match expected one '%s'", kv.Value, expectedValue)
+		}
+
+		log.Printf("[INFO] Right value was stored: '%s'", expectedValue)
 
 		return nil
 	}
