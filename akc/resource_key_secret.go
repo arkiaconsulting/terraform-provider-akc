@@ -1,6 +1,9 @@
 package akc
 
 import (
+	"net/url"
+	"strings"
+
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
@@ -34,6 +37,11 @@ func resourceKeySecret() *schema.Resource {
 				Default:  client.LabelNone,
 				ForceNew: true,
 			},
+			"latest_version": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 	}
 }
@@ -44,6 +52,11 @@ func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
 	key := d.Get("key").(string)
 	value := d.Get("secret_id").(string)
 	label := d.Get("label").(string)
+	trim := d.Get("latest_version").(bool)
+
+	if trim {
+		value = trimVersion(value)
+	}
 
 	_, err = client.SetKeyValueSecret(key, value, label)
 	if err != nil {
@@ -64,6 +77,11 @@ func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
 	endpoint, label, key := parseID(d.Id())
 	client, err := client.NewAppConfigurationClient(endpoint)
 	value := d.Get("secret_id").(string)
+	trim := d.Get("latest_version").(bool)
+
+	if trim {
+		value = trimVersion(value)
+	}
 
 	_, err = client.SetKeyValueSecret(key, value, label)
 	if err != nil {
@@ -78,4 +96,16 @@ func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
 	d.SetId(id)
 
 	return resourceKeyValueRead(d, m)
+}
+
+func trimVersion(s string) string {
+	url, _ := url.Parse(s)
+
+	pathParts := strings.Split(url.Path, "/")
+
+	if len(pathParts) == 4 {
+		url.Path = strings.Join(pathParts[:len(pathParts)-1], "/")
+	}
+
+	return url.String()
 }

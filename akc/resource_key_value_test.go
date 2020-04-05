@@ -1,15 +1,11 @@
 package akc
 
 import (
-	"errors"
-	"fmt"
-	"log"
 	"testing"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func TestAccCreateKeyValue(t *testing.T) {
@@ -19,10 +15,10 @@ func TestAccCreateKeyValue(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigWithoutLabel(key, value),
+				Config: buildTerraformConfigWithoutLabel(key, value),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -43,10 +39,10 @@ func TestAccCreateKeyValueWithLabel(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigWithLabel(label, key, value),
+				Config: buildTerraformConfigWithLabel(label, key, value),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -67,10 +63,10 @@ func TestAccUpdateKeyValueValue(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigWithoutLabel(key, value),
+				Config: buildTerraformConfigWithoutLabel(key, value),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -80,7 +76,7 @@ func TestAccUpdateKeyValueValue(t *testing.T) {
 				),
 			},
 			{
-				Config: BuildTerraformConfigWithoutLabel(key, newValue),
+				Config: buildTerraformConfigWithoutLabel(key, newValue),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -101,10 +97,10 @@ func TestAccUpdateKeyValueKey(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigWithoutLabel(key, value),
+				Config: buildTerraformConfigWithoutLabel(key, value),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -114,7 +110,7 @@ func TestAccUpdateKeyValueKey(t *testing.T) {
 				),
 			},
 			{
-				Config: BuildTerraformConfigWithoutLabel(newKey, value),
+				Config: buildTerraformConfigWithoutLabel(newKey, value),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -136,10 +132,10 @@ func TestAccUpdateKeyValueValueWithLabel(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigWithLabel(label, key, value),
+				Config: buildTerraformConfigWithLabel(label, key, value),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -149,7 +145,7 @@ func TestAccUpdateKeyValueValueWithLabel(t *testing.T) {
 				),
 			},
 			{
-				Config: BuildTerraformConfigWithLabel(label, key, newValue),
+				Config: buildTerraformConfigWithLabel(label, key, newValue),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -171,10 +167,10 @@ func TestAccUpdateKeyValueKeyWithLabel(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigWithLabel(label, key, value),
+				Config: buildTerraformConfigWithLabel(label, key, value),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -184,7 +180,7 @@ func TestAccUpdateKeyValueKeyWithLabel(t *testing.T) {
 				),
 			},
 			{
-				Config: BuildTerraformConfigWithLabel(label, newKey, value),
+				Config: buildTerraformConfigWithLabel(label, newKey, value),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -206,10 +202,10 @@ func TestAccUpdateKeyValueLabelWithLabel(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigWithLabel(label, key, value),
+				Config: buildTerraformConfigWithLabel(label, key, value),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -219,7 +215,7 @@ func TestAccUpdateKeyValueLabelWithLabel(t *testing.T) {
 				),
 			},
 			{
-				Config: BuildTerraformConfigWithLabel(newLabel, key, value),
+				Config: buildTerraformConfigWithLabel(newLabel, key, value),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueExists("akc_key_value.test"),
 					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
@@ -230,75 +226,4 @@ func TestAccUpdateKeyValueLabelWithLabel(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testKeyValueDestroy(state *terraform.State) error {
-	for _, rs := range state.RootModule().Resources {
-
-		if rs.Type != "akc_key_value" {
-			continue
-		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("No Record ID is set")
-		}
-
-		key := rs.Primary.Attributes["key"]
-		label := rs.Primary.Attributes["label"]
-		endpoint := rs.Primary.Attributes["endpoint"]
-		log.Printf("[INFO] Checking that KV is destroyed %s/%s/%s", endpoint, label, key)
-
-		cl, err := client.NewAppConfigurationClient(endpoint)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = cl.GetKeyValue(label, key)
-
-		if !errors.Is(err, client.AppConfigClientError{Message: client.KVNotFoundError.Message, Info: key}) {
-			return fmt.Errorf("expected %s, got %s", client.KVNotFoundError, err)
-		}
-
-		log.Printf("[INFO] KV is destroyed %s/%s/%s", endpoint, label, key)
-	}
-
-	return nil
-}
-
-func testCheckKeyValueExists(resource string) resource.TestCheckFunc {
-	return func(state *terraform.State) error {
-		log.Printf("[INFO] Checking that KV exist (%s)", resource)
-
-		rs, ok := state.RootModule().Resources[resource]
-		if !ok {
-			return fmt.Errorf("Not found: %s", resource)
-		}
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("No Record ID is set")
-		}
-
-		endpoint := rs.Primary.Attributes["endpoint"]
-		key := rs.Primary.Attributes["key"]
-		value := rs.Primary.Attributes["value"]
-		label := rs.Primary.Attributes["label"]
-		cl, err := client.NewAppConfigurationClient(endpoint)
-		if err != nil {
-			panic(err)
-		}
-
-		result, err := cl.GetKeyValue(label, key)
-		if errors.Is(err, client.KVNotFoundError) {
-			return fmt.Errorf("Cannot find resource %s", resource)
-		}
-
-		if err != nil {
-			return fmt.Errorf("Error fetching KV with resource %s. %s", resource, err)
-		}
-
-		if result.Value != value {
-			return fmt.Errorf("The given key %s exists but its value does not match", key)
-		}
-
-		return nil
-	}
 }

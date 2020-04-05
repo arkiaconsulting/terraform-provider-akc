@@ -1,36 +1,33 @@
 package akc
 
 import (
-	"errors"
 	"fmt"
-	"log"
 	"testing"
 
-	"github.com/arkiaconsulting/terraform-provider-akc/client"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func TestAccCreateKeySecret(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	secretID := fmt.Sprintf("https://toto/%s", secretName)
+	secretID := fmt.Sprintf("https://toto/%s/version", secretName)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigSecret(label, key, secretID),
+				Config: buildTerraformConfigSecret(label, key, secretID),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueSecretExists("akc_key_secret.test"),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "false"),
 				),
 			},
 		},
@@ -42,31 +39,33 @@ func TestAccUpdateKeySecretKey(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	newKey := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	secretID := fmt.Sprintf("https://toto/%s", secretName)
+	secretID := fmt.Sprintf("https://toto/%s/version", secretName)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigSecret(label, key, secretID),
+				Config: buildTerraformConfigSecret(label, key, secretID),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueSecretExists("akc_key_secret.test"),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "false"),
 				),
 			},
 			{
-				Config: BuildTerraformConfigSecret(label, newKey, secretID),
+				Config: buildTerraformConfigSecret(label, newKey, secretID),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueSecretExists("akc_key_secret.test"),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "key", newKey),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "false"),
 				),
 			},
 		},
@@ -77,32 +76,34 @@ func TestAccUpdateKeySecretSecretID(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	secretID := fmt.Sprintf("https://toto/%s", secretName)
+	secretID := fmt.Sprintf("https://toto/%s/version", secretName)
 	newSecretID := fmt.Sprintf("%s%s", secretID, "new")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigSecret(label, key, secretID),
+				Config: buildTerraformConfigSecret(label, key, secretID),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueSecretExists("akc_key_secret.test"),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "false"),
 				),
 			},
 			{
-				Config: BuildTerraformConfigSecret(label, key, newSecretID),
+				Config: buildTerraformConfigSecret(label, key, newSecretID),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueSecretExists("akc_key_secret.test"),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", newSecretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "false"),
 				),
 			},
 		},
@@ -114,72 +115,168 @@ func TestAccUpdateKeySecretSecretLabel(t *testing.T) {
 	newLabel := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	secretID := fmt.Sprintf("https://toto/%s", secretName)
+	secretID := fmt.Sprintf("https://toto/%s/version", secretName)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testKeyValueDestroy,
+		CheckDestroy: testCheckKeyValueDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: BuildTerraformConfigSecret(label, key, secretID),
+				Config: buildTerraformConfigSecret(label, key, secretID),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueSecretExists("akc_key_secret.test"),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "false"),
 				),
 			},
 			{
-				Config: BuildTerraformConfigSecret(newLabel, key, secretID),
+				Config: buildTerraformConfigSecret(newLabel, key, secretID),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckKeyValueSecretExists("akc_key_secret.test"),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "label", newLabel),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "false"),
 				),
 			},
 		},
 	})
 }
 
-func testCheckKeyValueSecretExists(resource string) resource.TestCheckFunc {
-	return func(state *terraform.State) error {
-		log.Printf("[INFO] Checking that KV secret exist (%s)", resource)
+func TestAccCreateKeySecretWithVersionLatestVersionTrue(t *testing.T) {
+	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
+	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
+	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	secretID := fmt.Sprintf("https://toto/secrets/%s/version", secretName)
 
-		rs, ok := state.RootModule().Resources[resource]
-		if !ok {
-			return fmt.Errorf("Not found: %s", resource)
-		}
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("No Record ID is set")
-		}
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { preCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testCheckKeyValueDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: buildTerraformConfigSecretLatestVersion(label, key, secretID, true),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckKeyValueSecretExists("akc_key_secret.test"),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "true"),
+					testCheckStoredSecretID("akc_key_secret.test", fmt.Sprintf("https://toto/secrets/%s", secretName)),
+				),
+			},
+		},
+	})
+}
 
-		endpoint := rs.Primary.Attributes["endpoint"]
-		key := rs.Primary.Attributes["key"]
-		secretID := rs.Primary.Attributes["secret_id"]
-		label := rs.Primary.Attributes["label"]
-		cl, err := client.NewAppConfigurationClient(endpoint)
-		if err != nil {
-			panic(err)
-		}
+func TestAccCreateKeySecretWithoutVersionLatestVersionTrue(t *testing.T) {
+	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
+	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
+	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	secretID := fmt.Sprintf("https://toto/secrets/%s", secretName)
 
-		result, err := cl.GetKeyValue(label, key)
-		if errors.Is(err, client.KVNotFoundError) {
-			return fmt.Errorf("Cannot find resource %s", resource)
-		}
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { preCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testCheckKeyValueDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: buildTerraformConfigSecretLatestVersion(label, key, secretID, true),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckKeyValueSecretExists("akc_key_secret.test"),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "true"),
+					testCheckStoredSecretID("akc_key_secret.test", secretID),
+				),
+			},
+		},
+	})
+}
 
-		if err != nil {
-			return fmt.Errorf("Error fetching KV with resource %s. %s", resource, err)
-		}
+func TestAccUpdateLatestVersionKeySecret(t *testing.T) {
+	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
+	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
+	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	secretID := fmt.Sprintf("https://toto/secrets/%s/version", secretName)
 
-		expectedValue := fmt.Sprintf("{\"uri\":\"%s\"}", secretID)
-		if result.Value != expectedValue {
-			return fmt.Errorf("The given key %s exists but its value does not match", key)
-		}
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { preCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testCheckKeyValueDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: buildTerraformConfigSecretLatestVersion(label, key, secretID, false),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckKeyValueSecretExists("akc_key_secret.test"),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "false"),
+					testCheckStoredSecretID("akc_key_secret.test", secretID),
+				),
+			},
+			{
+				Config: buildTerraformConfigSecretLatestVersion(label, key, secretID, true),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckKeyValueSecretExists("akc_key_secret.test"),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "true"),
+					testCheckStoredSecretID("akc_key_secret.test", fmt.Sprintf("https://toto/secrets/%s", secretName)),
+				),
+			},
+		},
+	})
+}
 
-		return nil
-	}
+func TestAccUpdateSecretIdKeySecretWithVersion(t *testing.T) {
+	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
+	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
+	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	secretID := fmt.Sprintf("https://toto/secrets/%s/version", secretName)
+	newSecretID := fmt.Sprintf("https://toto/secrets/%s/otherversion", secretName)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { preCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testCheckKeyValueDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: buildTerraformConfigSecretLatestVersion(label, key, secretID, false),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckKeyValueSecretExists("akc_key_secret.test"),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", secretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "false"),
+					testCheckStoredSecretID("akc_key_secret.test", secretID),
+				),
+			},
+			{
+				Config: buildTerraformConfigSecretLatestVersion(label, key, newSecretID, true),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckKeyValueSecretExists("akc_key_secret.test"),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "endpoint", endpointUnderTest),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "label", label),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "key", key),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "secret_id", newSecretID),
+					resource.TestCheckResourceAttr("akc_key_secret.test", "latest_version", "true"),
+					testCheckStoredSecretID("akc_key_secret.test", fmt.Sprintf("https://toto/secrets/%s", secretName)),
+				),
+			},
+		},
+	})
 }
