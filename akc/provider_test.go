@@ -11,7 +11,8 @@ var testProviders = map[string]terraform.ResourceProvider{
 	"akc": Provider(),
 }
 
-const endpointUnderTest = "https://testlg.azconfig.io"
+const appConfigHost = "testlg.azconfig.io"
+const endpointUnderTest = "https://" + appConfigHost
 
 func TestProvider(t *testing.T) {
 	if err := Provider().(*schema.Provider).InternalValidate(); err != nil {

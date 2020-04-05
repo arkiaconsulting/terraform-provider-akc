@@ -1,6 +1,8 @@
 package akc
 
 import (
+	"encoding/json"
+	"log"
 	"net/url"
 	"strings"
 
@@ -11,10 +13,13 @@ import (
 func resourceKeySecret() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKeySecretCreate,
-		Read:   resourceKeyValueRead,
+		Read:   resourceKeySecretRead,
 		Update: resourceKeySecretUpdate,
 		Delete: resourceKeyValueDelete,
 		Exists: resourceKeyValueExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"endpoint": &schema.Schema{
@@ -41,6 +46,10 @@ func resourceKeySecret() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
+			},
+			"value": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 		},
 	}
@@ -69,8 +78,9 @@ func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
 	}
 
 	d.SetId(id)
+	d.Set("value", value)
 
-	return resourceKeyValueRead(d, m)
+	return resourceKeySecretRead(d, m)
 }
 
 func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
@@ -94,8 +104,40 @@ func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
 	}
 
 	d.SetId(id)
+	d.Set("value", value)
 
-	return resourceKeyValueRead(d, m)
+	return resourceKeySecretRead(d, m)
+}
+
+func resourceKeySecretRead(d *schema.ResourceData, m interface{}) error {
+	log.Printf("[INFO] Reading resource %s", d.Id())
+
+	endpoint, label, key := parseID(d.Id())
+	cl, err := client.NewAppConfigurationClient(endpoint)
+
+	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
+	kv, err := cl.GetKeyValue(label, key)
+	if err != nil {
+		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, key)
+		d.SetId("")
+		return nil
+	}
+
+	if kv.Label == "" {
+		kv.Label = client.LabelNone
+	}
+
+	var wrapper keyVaultReferenceValue
+	err = json.Unmarshal([]byte(kv.Value), &wrapper)
+
+	d.Set("endpoint", endpoint)
+	d.Set("key", key)
+	d.Set("value", wrapper.URI)
+	d.Set("label", kv.Label)
+
+	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, wrapper.URI)
+
+	return nil
 }
 
 func trimVersion(s string) string {
@@ -108,4 +150,8 @@ func trimVersion(s string) string {
 	}
 
 	return url.String()
+}
+
+type keyVaultReferenceValue struct {
+	URI string
 }

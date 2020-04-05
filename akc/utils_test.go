@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
@@ -76,7 +77,19 @@ resource "akc_key_secret" "test" {
 `, endpointUnderTest, label, key, secretID, latestVersion)
 }
 
+func buildTerraformConfigImport(label string, key string, value string) string {
+	return fmt.Sprintf(`
+resource "akc_key_value" "import" {
+  endpoint     = "%s"
+  label = "%s"
+  key = "%s"
+  value = "%s"
+}
+`, endpointUnderTest, label, key, value)
+}
+
 func testCheckKeyValueDestroy(state *terraform.State) error {
+	log.Printf("[INFO] Entering Destroy")
 	for _, rs := range state.RootModule().Resources {
 
 		if rs.Type != "akc_key_value" {
@@ -104,6 +117,8 @@ func testCheckKeyValueDestroy(state *terraform.State) error {
 		}
 
 		log.Printf("[INFO] KV is destroyed %s/%s/%s", endpoint, label, key)
+
+		return nil
 	}
 
 	return nil
@@ -220,6 +235,7 @@ func testCheckStoredValue(kv *client.KeyValueResponse, expectedValue string) res
 	}
 }
 
-type keyVaultReferenceValue struct {
-	URI string
+func requiresImportError(resourceName string) *regexp.Regexp {
+	message := "The resource needs to be imported: %s"
+	return regexp.MustCompile(fmt.Sprintf(message, resourceName))
 }

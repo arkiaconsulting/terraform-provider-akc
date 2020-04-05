@@ -1,6 +1,7 @@
 package akc
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -17,7 +18,9 @@ func resourceKeyValue() *schema.Resource {
 		Update: resourceKeyValueUpdate,
 		Delete: resourceKeyValueDelete,
 		Exists: resourceKeyValueExists,
-
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"endpoint": &schema.Schema{
 				Type:     schema.TypeString,
@@ -44,11 +47,20 @@ func resourceKeyValue() *schema.Resource {
 }
 
 func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
+	log.Print("[INFO] Creating resource")
+
 	endpoint := d.Get("endpoint").(string)
 	cl, err := client.NewAppConfigurationClient(endpoint)
 	key := d.Get("key").(string)
 	value := d.Get("value").(string)
 	label := d.Get("label").(string)
+
+	if d.IsNewResource() {
+		_, err := cl.GetKeyValue(label, key)
+		if err == nil {
+			return fmt.Errorf("The resource needs to be imported: %s", "akc_key_value")
+		}
+	}
 
 	_, err = cl.SetKeyValue(label, key, value)
 	if err != nil {
@@ -66,13 +78,17 @@ func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
+	log.Printf("[INFO] Reading resource %s", d.Id())
 
 	endpoint, label, key := parseID(d.Id())
 	cl, err := client.NewAppConfigurationClient(endpoint)
 
+	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	result, err := cl.GetKeyValue(label, key)
 	if err != nil {
-		return err
+		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, key)
+		d.SetId("")
+		return nil
 	}
 
 	if result.Label == "" {
@@ -84,10 +100,14 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 	d.Set("value", result.Value)
 	d.Set("label", result.Label)
 
+	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, result.Value)
+
 	return nil
 }
 
 func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
+	log.Printf("[INFO] Updating resource %s", d.Id())
+
 	endpoint, label, key := parseID(d.Id())
 	cl, err := client.NewAppConfigurationClient(endpoint)
 	value := d.Get("value").(string)
@@ -108,6 +128,8 @@ func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
+	log.Printf("[INFO] Deleting resource %s", d.Id())
+
 	endpoint, label, key := parseID(d.Id())
 
 	cl, err := client.NewAppConfigurationClient(endpoint)
@@ -122,12 +144,18 @@ func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceKeyValueExists(d *schema.ResourceData, m interface{}) (bool, error) {
+	log.Printf("[INFO] Does resource exist %s", d.Id())
+
 	endpoint, label, key := parseID(d.Id())
 	cl, err := client.NewAppConfigurationClient(endpoint)
 
 	_, err = cl.GetKeyValue(label, key)
 	if err != nil {
-		return false, err
+		if errors.Is(err, client.AppConfigClientError{Message: client.KVNotFoundError.Message, Info: key}) {
+			return false, nil
+		} else {
+			return false, err
+		}
 	}
 
 	return true, nil
@@ -145,14 +173,11 @@ func formatID(endpoint string, label string, key string) (string, error) {
 }
 
 func parseID(id string) (endpoint string, label string, key string) {
-	log.Printf("[INFO] Parsing id %s", id)
 	split := strings.Split(id, "/")
 
 	endpoint = fmt.Sprintf("https://%s", split[0])
 	label = split[1]
 	key = split[2]
-
-	log.Printf("[INFO] Parsed %s with label %s and key: %s", endpoint, label, key)
 
 	return endpoint, label, key
 }
