@@ -9,14 +9,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 )
 
-func TestAccCreateKeySecret(t *testing.T) {
+func TestAccKeySecret_create(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	secretID := fmt.Sprintf("https://toto/%s/version", secretName)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -35,15 +35,16 @@ func TestAccCreateKeySecret(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "akc_key_secret.test",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "akc_key_secret.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"latest_version", "secret_id"},
 			},
 		},
 	})
 }
 
-func TestAccUpdateKeySecretKey(t *testing.T) {
+func TestAccKeySecret_updateKey(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	newKey := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
@@ -51,7 +52,7 @@ func TestAccUpdateKeySecretKey(t *testing.T) {
 	secretID := fmt.Sprintf("https://toto/%s/version", secretName)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -86,7 +87,7 @@ func TestAccUpdateKeySecretKey(t *testing.T) {
 	})
 }
 
-func TestAccUpdateKeySecretSecretID(t *testing.T) {
+func TestAccKeySecret_updateSecretID(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -94,7 +95,7 @@ func TestAccUpdateKeySecretSecretID(t *testing.T) {
 	newSecretID := fmt.Sprintf("%s%s", secretID, "new")
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -129,7 +130,7 @@ func TestAccUpdateKeySecretSecretID(t *testing.T) {
 	})
 }
 
-func TestAccUpdateKeySecretLabel(t *testing.T) {
+func TestAccKeySecret_updateLabel(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	newLabel := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
@@ -137,7 +138,7 @@ func TestAccUpdateKeySecretLabel(t *testing.T) {
 	secretID := fmt.Sprintf("https://toto/%s/version", secretName)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -172,14 +173,14 @@ func TestAccUpdateKeySecretLabel(t *testing.T) {
 	})
 }
 
-func TestAccCreateKeySecretWithVersionLatestVersionTrue(t *testing.T) {
+func TestAccKeySecret_createWithLatestVersion(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	secretID := fmt.Sprintf("https://toto/secrets/%s/version", secretName)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -198,22 +199,23 @@ func TestAccCreateKeySecretWithVersionLatestVersionTrue(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "akc_key_secret.test",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "akc_key_secret.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"latest_version", "secret_id"},
 			},
 		},
 	})
 }
 
-func TestAccCreateKeySecretWithoutVersionLatestVersionTrue(t *testing.T) {
+func TestAccKeySecret_createWithLatestVersion_andSecretIDWithoutVersion(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	secretID := fmt.Sprintf("https://toto/secrets/%s", secretName)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -231,18 +233,24 @@ func TestAccCreateKeySecretWithoutVersionLatestVersionTrue(t *testing.T) {
 					testCheckStoredSecretID(&kv, secretID),
 				),
 			},
+			{
+				ResourceName:            "akc_key_secret.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"latest_version", "secret_id"},
+			},
 		},
 	})
 }
 
-func TestAccUpdateLatestVersionKeySecret(t *testing.T) {
+func TestAccKeySecret_updateLatestVersion(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	secretID := fmt.Sprintf("https://toto/secrets/%s/version", secretName)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -277,7 +285,7 @@ func TestAccUpdateLatestVersionKeySecret(t *testing.T) {
 	})
 }
 
-func TestAccUpdateSecretIdKeySecretWithVersion(t *testing.T) {
+func TestAccKeySecret_updateSecretIdVersion(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	secretName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -285,7 +293,7 @@ func TestAccUpdateSecretIdKeySecretWithVersion(t *testing.T) {
 	newSecretID := fmt.Sprintf("https://toto/secrets/%s/otherversion", secretName)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,

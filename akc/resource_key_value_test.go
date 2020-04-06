@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 )
 
-func TestAccCreateKeyValue(t *testing.T) {
+func TestAccKeyValue_create(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	var kv client.KeyValueResponse
@@ -38,13 +38,13 @@ func TestAccCreateKeyValue(t *testing.T) {
 	})
 }
 
-func TestAccCreateKeyValueWithLabel(t *testing.T) {
+func TestAccKeyValue_createWithLabel(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -69,13 +69,13 @@ func TestAccCreateKeyValueWithLabel(t *testing.T) {
 	})
 }
 
-func TestAccUpdateKeyValueValue(t *testing.T) {
+func TestAccKeyValue_updateValue(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	newValue := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -99,20 +99,20 @@ func TestAccUpdateKeyValueValue(t *testing.T) {
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", client.LabelNone),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", newValue),
-					testCheckStoredValue(&kv, value),
+					testCheckStoredValue(&kv, newValue),
 				),
 			},
 		},
 	})
 }
 
-func TestAccUpdateKeyValueKey(t *testing.T) {
+func TestAccKeyValue_updateKey(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	newKey := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -143,14 +143,14 @@ func TestAccUpdateKeyValueKey(t *testing.T) {
 	})
 }
 
-func TestAccUpdateKeyValueValueWithLabel(t *testing.T) {
+func TestAccKeyValue_updateValueWithLabel(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	newValue := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -174,21 +174,21 @@ func TestAccUpdateKeyValueValueWithLabel(t *testing.T) {
 					resource.TestCheckResourceAttr("akc_key_value.test", "label", label),
 					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", newValue),
-					testCheckStoredValue(&kv, value),
+					testCheckStoredValue(&kv, newValue),
 				),
 			},
 		},
 	})
 }
 
-func TestAccUpdateKeyValueKeyWithLabel(t *testing.T) {
+func TestAccKeyValue_updateKeyWithLabel(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	newKey := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -219,14 +219,14 @@ func TestAccUpdateKeyValueKeyWithLabel(t *testing.T) {
 	})
 }
 
-func TestAccUpdateKeyValueLabelWithLabel(t *testing.T) {
+func TestAccKeyValue_updateLabelWithLabel(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	newLabel := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	var kv client.KeyValueResponse
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
@@ -262,7 +262,7 @@ func TestAccKeyValue_requiresImport(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 
-	resource.ParallelTest(t, resource.TestCase{
+	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { preCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCheckKeyValueDestroy,
