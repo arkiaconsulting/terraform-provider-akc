@@ -6,6 +6,7 @@ data "azurerm_client_config" "current" {
 }
 
 provider "akc" {
+  version = "0.1.0"
 }
 
 resource "azurerm_resource_group" "test" {
@@ -17,7 +18,7 @@ resource "azurerm_app_configuration" "test" {
   name                = "testlg"
   resource_group_name = azurerm_resource_group.test.name
   location            = azurerm_resource_group.test.location
-  sku                 = "free"
+  sku                 = "standard"
 }
 
 resource "azurerm_key_vault" "test" {
@@ -32,13 +33,6 @@ resource "azurerm_key_vault_access_policy" "sp" {
   key_vault_id       = azurerm_key_vault.test.id
   tenant_id          = data.azurerm_client_config.current.tenant_id
   object_id          = data.azurerm_client_config.current.object_id
-  secret_permissions = ["get", "set", "list", "delete"]
-}
-
-resource "azurerm_key_vault_access_policy" "lg" {
-  key_vault_id       = azurerm_key_vault.test.id
-  tenant_id          = data.azurerm_client_config.current.tenant_id
-  object_id          = "4f9ae383-28ad-4b18-b096-d58b285e1aee"
   secret_permissions = ["get", "set", "list", "delete"]
 }
 

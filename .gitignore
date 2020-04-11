@@ -3,5 +3,4 @@ azureenv.sh
 *.tfstate
 *.tfstate.backup
 .vscode/
-terraform-provider-akc
-*.exe
+!terraform-provider-akc_v*.exe
