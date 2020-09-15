@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    akc = {
+      source = "arkiaconsulting/akc"
+    }
+  }
+}
+
 provider "azurerm" {
   features {}
 }
@@ -6,7 +14,6 @@ data "azurerm_client_config" "current" {
 }
 
 provider "akc" {
-  version = "0.1.0"
 }
 
 resource "azurerm_resource_group" "test" {

@@ -5,6 +5,14 @@ This terraform provider will allow the creation the Azure App Configuration reso
 ```
 # Configure the Akc App Configuration provider
 
+terraform {
+  required_providers {
+    akc = {
+      source = "arkiaconsulting/akc"
+    }
+  }
+}
+
 provider "akc" {
 }
 
@@ -42,7 +50,4 @@ The provider uses the current Azure CLI credentials if available, and fall back 
 The identity must have be assigned the RBAC role `App Configuration Data Owner`.
 
 ## Installation
-### Linux
-Copy the `terraform-provider-akc_vX.X.X` to your main terraform configuration folder.
-### Windows
-Copy the `terraform-provider-akc_vX.X.X.exe` to your main terraform configuration folder.
+The provider is available on the terraform registry
