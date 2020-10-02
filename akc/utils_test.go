@@ -88,6 +88,25 @@ resource "akc_key_value" "import" {
 `, endpointUnderTest, label, key, value)
 }
 
+func buildTerraformConfigDataSourceKeyValue(key string) string {
+	return fmt.Sprintf(`
+data "akc_key_value" "test" {
+  endpoint     = "%s"
+  key = "%s"
+}
+`, endpointUnderTest, key)
+}
+
+func buildTerraformConfigDataSourceKeyValueLabel(label string, key string) string {
+	return fmt.Sprintf(`
+data "akc_key_value" "test" {
+  endpoint     = "%s"
+  label = "%s"
+  key = "%s"
+}
+`, endpointUnderTest, label, key)
+}
+
 func testCheckKeyValueDestroy(state *terraform.State) error {
 	log.Printf("[INFO] Entering Destroy")
 	for _, rs := range state.RootModule().Resources {
