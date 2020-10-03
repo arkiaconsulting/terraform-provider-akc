@@ -16,7 +16,8 @@ func Provider() terraform.ResourceProvider {
 			"akc_key_secret": resourceKeySecret(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"akc_key_value": dataSourceKeyValue(),
+			"akc_key_value":  dataSourceKeyValue(),
+			"akc_key_secret": dataSourceKeySecret(),
 		},
 	}
 }

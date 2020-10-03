@@ -107,6 +107,25 @@ data "akc_key_value" "test" {
 `, endpointUnderTest, label, key)
 }
 
+func buildTerraformConfigDataSourceKeySecret(key string) string {
+	return fmt.Sprintf(`
+data "akc_key_secret" "test" {
+  endpoint     = "%s"
+  key = "%s"
+}
+`, endpointUnderTest, key)
+}
+
+func buildTerraformConfigDataSourceKeySecretLabel(label string, key string) string {
+	return fmt.Sprintf(`
+data "akc_key_secret" "test" {
+  endpoint     = "%s"
+  label = "%s"
+  key = "%s"
+}
+`, endpointUnderTest, label, key)
+}
+
 func testCheckKeyValueDestroy(state *terraform.State) error {
 	log.Printf("[INFO] Entering Destroy")
 	for _, rs := range state.RootModule().Resources {
