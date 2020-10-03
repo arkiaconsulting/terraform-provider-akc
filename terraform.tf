@@ -88,3 +88,23 @@ resource "akc_key_secret" "secret2" {
   secret_id      = azurerm_key_vault_secret.secret.id
   latest_version = true
 }
+
+data "akc_key_value" "test2_label" {
+  endpoint = azurerm_app_configuration.test.endpoint
+  label    = "myLabel"
+  key      = "myKey2"
+}
+
+data "akc_key_secret" "secret2" {
+  endpoint = azurerm_app_configuration.test.endpoint
+  label    = "myLabel"
+  key      = "my-secret12-latest"
+}
+
+output "one" {
+  value = data.akc_key_value.test2_label.value
+}
+
+output "two" {
+  value = data.akc_key_secret.secret2.secret_id
+}
