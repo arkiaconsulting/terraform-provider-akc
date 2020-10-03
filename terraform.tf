@@ -17,7 +17,7 @@ provider "akc" {
 }
 
 resource "azurerm_resource_group" "test" {
-  name     = "testlg"
+  name     = "tf-tests"
   location = "francecentral"
 }
 

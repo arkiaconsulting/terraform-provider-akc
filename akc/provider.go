@@ -7,13 +7,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
-// Provider coucouc
+// Provider akc
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{},
 		ResourcesMap: map[string]*schema.Resource{
 			"akc_key_value":  resourceKeyValue(),
 			"akc_key_secret": resourceKeySecret(),
+		},
+		DataSourcesMap: map[string]*schema.Resource{
+			"akc_key_value":  dataSourceKeyValue(),
+			"akc_key_secret": dataSourceKeySecret(),
 		},
 	}
 }
