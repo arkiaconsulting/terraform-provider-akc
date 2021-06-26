@@ -6,8 +6,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"terraform-provider-akc/client"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceKeySecret() *schema.Resource {
@@ -22,11 +23,6 @@ func resourceKeySecret() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
 			"key": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -56,8 +52,8 @@ func resourceKeySecret() *schema.Resource {
 }
 
 func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
-	endpoint := d.Get("endpoint").(string)
-	client, err := client.NewAppConfigurationClient(endpoint)
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
 	key := d.Get("key").(string)
 	value := d.Get("secret_id").(string)
 	label := d.Get("label").(string)
@@ -67,7 +63,7 @@ func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
 		value = trimVersion(value)
 	}
 
-	_, err = client.SetKeyValueSecret(key, value, label)
+	_, err := c.SetKeyValueSecret(key, value, label)
 	if err != nil {
 		return err
 	}
@@ -84,8 +80,9 @@ func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
-	endpoint, label, key := parseID(d.Id())
-	client, err := client.NewAppConfigurationClient(endpoint)
+	_, label, key := parseID(d.Id())
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
 	value := d.Get("secret_id").(string)
 	trim := d.Get("latest_version").(bool)
 
@@ -93,7 +90,7 @@ func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
 		value = trimVersion(value)
 	}
 
-	_, err = client.SetKeyValueSecret(key, value, label)
+	_, err := c.SetKeyValueSecret(key, value, label)
 	if err != nil {
 		return err
 	}
@@ -112,11 +109,12 @@ func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
 func resourceKeySecretRead(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
-	endpoint, label, key := parseID(d.Id())
-	cl, err := client.NewAppConfigurationClient(endpoint)
+	_, label, key := parseID(d.Id())
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	kv, err := cl.GetKeyValue(label, key)
+	kv, err := c.GetKeyValue(label, key)
 	if err != nil {
 		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, key)
 		d.SetId("")
@@ -130,7 +128,6 @@ func resourceKeySecretRead(d *schema.ResourceData, m interface{}) error {
 	var wrapper keyVaultReferenceValue
 	err = json.Unmarshal([]byte(kv.Value), &wrapper)
 
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("value", wrapper.URI)
 	d.Set("label", kv.Label)

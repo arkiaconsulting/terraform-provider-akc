@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"terraform-provider-akc/client"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceKeySecret() *schema.Resource {
@@ -14,10 +15,6 @@ func dataSourceKeySecret() *schema.Resource {
 		Read: dataSourceKeySecretRead,
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
 			"key": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -38,14 +35,14 @@ func dataSourceKeySecret() *schema.Resource {
 func dataSourceKeySecretRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
-	endpoint := d.Get("endpoint").(string)
 	label := d.Get("label").(string)
 	key := d.Get("key").(string)
 
-	cl, err := client.NewAppConfigurationClient(endpoint)
+	c := meta.(*client.Client)
+	endpoint := c.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	kv, err := cl.GetKeyValue(label, key)
+	kv, err := c.GetKeyValue(label, key)
 	if err != nil {
 		return fmt.Errorf("Error getting App Configuration key %s/%s: %+v", label, key, err)
 	}
@@ -63,7 +60,6 @@ func dataSourceKeySecretRead(d *schema.ResourceData, meta interface{}) error {
 	err = json.Unmarshal([]byte(kv.Value), &wrapper)
 
 	d.SetId(id)
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("secret_id", wrapper.URI)
 	d.Set("label", kv.Label)

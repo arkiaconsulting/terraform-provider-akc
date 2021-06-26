@@ -21,12 +21,12 @@ type nonExistingKeyValueWithLabelTestSuite struct {
 	key       string
 	value     string
 	secretURI string
-	client    *AppConfigClient
+	client    *Client
 }
 
 func (s *nonExistingKeyValueWithLabelTestSuite) SetupSuite() {
 	s.uri = "https://testlg.azconfig.io"
-	client, err := NewAppConfigurationClient(s.uri)
+	client, err := NewClientCli(s.uri)
 
 	if err != nil {
 		panic(err)

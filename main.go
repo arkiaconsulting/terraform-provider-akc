@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/arkiaconsulting/terraform-provider-akc/akc"
-	"github.com/hashicorp/terraform-plugin-sdk/plugin"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
+	"terraform-provider-akc/akc"
 )
 
 func main() {

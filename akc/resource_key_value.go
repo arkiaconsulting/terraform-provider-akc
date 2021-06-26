@@ -7,8 +7,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"terraform-provider-akc/client"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceKeyValue() *schema.Resource {
@@ -22,11 +23,6 @@ func resourceKeyValue() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			"endpoint": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
 			"key": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -49,20 +45,20 @@ func resourceKeyValue() *schema.Resource {
 func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 	log.Print("[INFO] Creating resource")
 
-	endpoint := d.Get("endpoint").(string)
-	cl, err := client.NewAppConfigurationClient(endpoint)
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
 	key := d.Get("key").(string)
 	value := d.Get("value").(string)
 	label := d.Get("label").(string)
 
 	if d.IsNewResource() {
-		_, err := cl.GetKeyValue(label, key)
+		_, err := c.GetKeyValue(label, key)
 		if err == nil {
 			return fmt.Errorf("The resource needs to be imported: %s", "akc_key_value")
 		}
 	}
 
-	_, err = cl.SetKeyValue(label, key, value)
+	_, err := c.SetKeyValue(label, key, value)
 	if err != nil {
 		return err
 	}
@@ -80,11 +76,12 @@ func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
-	endpoint, label, key := parseID(d.Id())
-	cl, err := client.NewAppConfigurationClient(endpoint)
+	_, label, key := parseID(d.Id())
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	result, err := cl.GetKeyValue(label, key)
+	result, err := c.GetKeyValue(label, key)
 	if err != nil {
 		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, key)
 		d.SetId("")
@@ -95,7 +92,6 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 		result.Label = client.LabelNone
 	}
 
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("value", result.Value)
 	d.Set("label", result.Label)
@@ -108,11 +104,12 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Updating resource %s", d.Id())
 
-	endpoint, label, key := parseID(d.Id())
-	cl, err := client.NewAppConfigurationClient(endpoint)
+	_, label, key := parseID(d.Id())
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
 	value := d.Get("value").(string)
 
-	_, err = cl.SetKeyValue(label, key, value)
+	_, err := c.SetKeyValue(label, key, value)
 	if err != nil {
 		return err
 	}
@@ -130,11 +127,11 @@ func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Deleting resource %s", d.Id())
 
-	endpoint, label, key := parseID(d.Id())
+	_, label, key := parseID(d.Id())
 
-	cl, err := client.NewAppConfigurationClient(endpoint)
+	c := m.(*client.Client)
 
-	_, err = cl.DeleteKeyValue(label, key)
+	_, err := c.DeleteKeyValue(label, key)
 	if err != nil {
 		return err
 	}
@@ -146,10 +143,10 @@ func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 func resourceKeyValueExists(d *schema.ResourceData, m interface{}) (bool, error) {
 	log.Printf("[INFO] Does resource exist %s", d.Id())
 
-	endpoint, label, key := parseID(d.Id())
-	cl, err := client.NewAppConfigurationClient(endpoint)
+	_, label, key := parseID(d.Id())
+	c := m.(*client.Client)
 
-	_, err = cl.GetKeyValue(label, key)
+	_, err := c.GetKeyValue(label, key)
 	if err != nil {
 		if errors.Is(err, client.AppConfigClientError{Message: client.KVNotFoundError.Message, Info: key}) {
 			return false, nil

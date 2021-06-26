@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"terraform-provider-akc/utils"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
-	"github.com/arkiaconsulting/terraform-provider-akc/utils"
 )
 
 var (
-	// LabelNone Represents an empty label
 	LabelNone = "%00"
 )
 
@@ -20,10 +20,9 @@ var (
 	keyVaultRefContentType = "application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8"
 )
 
-// AppConfigClient holds all of the information required to connect to a server
-type AppConfigClient struct {
+type Client struct {
 	*autorest.Client
-	AppConfigURI string
+	Endpoint string
 }
 
 type setKeyValuePayload struct {
@@ -31,24 +30,56 @@ type setKeyValuePayload struct {
 	ContentType string `json:"content_type"`
 }
 
-// NewAppConfigurationClient instantiate a new client
-func NewAppConfigurationClient(appConfigURI string) (*AppConfigClient, error) {
-	client := autorest.NewClientWithUserAgent(userAgent())
-	authorizer, err := getAuthorizer(appConfigURI)
+func NewClientCreds(endpoint string, clientID string, clientSecret string, tenantID string) (*Client, error) {
+
+	ccc := auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID)
+	ccc.Resource = endpoint
+
+	authorizer, err := ccc.Authorizer()
 	if err != nil {
 		return nil, err
 	}
+	return NewClient(endpoint, authorizer)
+}
 
+func NewClientEnv(endpoint string) (*Client, error) {
+	authorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	return NewClient(endpoint, authorizer)
+}
+
+func NewClientCli(endpoint string) (*Client, error) {
+	authorizer, err := auth.NewAuthorizerFromCLIWithResource(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	return NewClient(endpoint, authorizer)
+}
+
+func NewClientMsi(endpoint string) (*Client, error) {
+	msiConfig := auth.NewMSIConfig()
+	msiConfig.Resource = endpoint
+
+	authorizer, err := msiConfig.Authorizer()
+	if err != nil {
+		return nil, err
+	}
+	return NewClient(endpoint, authorizer)
+}
+
+func NewClient(endpoint string, authorizer autorest.Authorizer) (*Client, error) {
+	client := autorest.NewClientWithUserAgent(userAgent())
 	client.Authorizer = authorizer
 
-	return &AppConfigClient{
-		Client:       &client,
-		AppConfigURI: appConfigURI,
+	return &Client{
+		Client:   &client,
+		Endpoint: endpoint,
 	}, nil
 }
 
-// GetKeyValue get a given App Configuration key-value
-func (client *AppConfigClient) GetKeyValue(label string, key string) (KeyValueResponse, error) {
+func (client *Client) GetKeyValue(label string, key string) (KeyValueResponse, error) {
 	result := KeyValueResponse{}
 	resp, err := client.send(
 		label,
@@ -71,18 +102,16 @@ func (client *AppConfigClient) GetKeyValue(label string, key string) (KeyValueRe
 	return result, nil
 }
 
-// SetKeyValue creates a key with the given value
-func (client *AppConfigClient) SetKeyValue(label string, key string, value string) (KeyValueResponse, error) {
+func (client *Client) SetKeyValue(label string, key string, value string) (KeyValueResponse, error) {
 	return client.setKeyValue(label, key, value, defaultContentType)
 }
 
-// SetKeyValueSecret creates a key with the given KeyVault secret ID
-func (client *AppConfigClient) SetKeyValueSecret(key string, secretID string, label string) (KeyValueResponse, error) {
+func (client *Client) SetKeyValueSecret(key string, secretID string, label string) (KeyValueResponse, error) {
 	value := fmt.Sprintf("{\"uri\":\"%s\"}", secretID)
 	return client.setKeyValue(label, key, value, keyVaultRefContentType)
 }
 
-func (client *AppConfigClient) setKeyValue(label string, key string, value string, contentType string) (KeyValueResponse, error) {
+func (client *Client) setKeyValue(label string, key string, value string, contentType string) (KeyValueResponse, error) {
 	result := KeyValueResponse{}
 	payload := setKeyValuePayload{
 		Value:       value,
@@ -112,8 +141,7 @@ func (client *AppConfigClient) setKeyValue(label string, key string, value strin
 	return result, nil
 }
 
-// DeleteKeyValue get a given App Configuration key-value
-func (client *AppConfigClient) DeleteKeyValue(label string, key string) (bool, error) {
+func (client *Client) DeleteKeyValue(label string, key string) (bool, error) {
 	resp, err := client.send(
 		label,
 		key,
@@ -144,7 +172,7 @@ func getJSON(response *http.Response, target interface{}) error {
 	return err
 }
 
-func (client *AppConfigClient) send(label string, key string, additionalDecorator ...autorest.PrepareDecorator) (*http.Response, error) {
+func (client *Client) send(label string, key string, additionalDecorator ...autorest.PrepareDecorator) (*http.Response, error) {
 	req, err := client.getPreparer(
 		label,
 		key,
@@ -175,19 +203,7 @@ func (client *AppConfigClient) send(label string, key string, additionalDecorato
 	return resp, err
 }
 
-func getAuthorizer(resource string) (autorest.Authorizer, error) {
-	authorizer, err := auth.NewAuthorizerFromCLIWithResource(resource)
-	if err != nil {
-		authorizer, err = auth.NewAuthorizerFromEnvironmentWithResource(resource)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to find a suitable authorizer")
-		}
-	}
-
-	return authorizer, nil
-}
-
-func (client *AppConfigClient) getPreparer(label string, key string, additionalDecorators ...autorest.PrepareDecorator) autorest.Preparer {
+func (client *Client) getPreparer(label string, key string, additionalDecorators ...autorest.PrepareDecorator) autorest.Preparer {
 	const apiVersion = "1.0"
 	queryParameters := map[string]interface{}{
 		"label":       label,
@@ -199,7 +215,7 @@ func (client *AppConfigClient) getPreparer(label string, key string, additionalD
 	}
 
 	decorators := []autorest.PrepareDecorator{
-		autorest.WithBaseURL(client.AppConfigURI),
+		autorest.WithBaseURL(client.Endpoint),
 		autorest.WithPathParameters("/kv/{key}", pathParameters),
 		autorest.WithQueryParameters(queryParameters),
 		client.Client.WithAuthorization(),

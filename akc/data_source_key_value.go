@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"terraform-provider-akc/client"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceKeyValue() *schema.Resource {
@@ -13,10 +14,6 @@ func dataSourceKeyValue() *schema.Resource {
 		Read: dataSourceKeyValueRead,
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
 			"key": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -37,11 +34,11 @@ func dataSourceKeyValue() *schema.Resource {
 func dataSourceKeyValueRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
-	endpoint := d.Get("endpoint").(string)
 	label := d.Get("label").(string)
 	key := d.Get("key").(string)
 
-	cl, err := client.NewAppConfigurationClient(endpoint)
+	cl := meta.(*client.Client)
+	endpoint := cl.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	kv, err := cl.GetKeyValue(label, key)
@@ -59,7 +56,6 @@ func dataSourceKeyValueRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.SetId(id)
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("value", kv.Value)
 	d.Set("label", kv.Label)

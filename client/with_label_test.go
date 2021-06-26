@@ -19,12 +19,12 @@ type existingKeyValueWithLabelTestSuite struct {
 	label  string
 	key    string
 	value  string
-	client *AppConfigClient
+	client *Client
 }
 
 func (s *existingKeyValueWithLabelTestSuite) SetupSuite() {
 	s.uri = "https://testlg.azconfig.io"
-	client, err := NewAppConfigurationClient(s.uri)
+	client, err := NewClientCli(s.uri)
 
 	if err != nil {
 		panic(err)
