@@ -15,20 +15,20 @@ func dataSourceKeyValue() *schema.Resource {
 		ReadContext: dataSourceKeyValueRead,
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": &schema.Schema{
+			"endpoint": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"key": &schema.Schema{
+			"key": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"label": &schema.Schema{
+			"label": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  client.LabelNone,
 			},
-			"value": &schema.Schema{
+			"value": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},

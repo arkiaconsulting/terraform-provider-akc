@@ -23,32 +23,32 @@ func resourceKeySecret() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": &schema.Schema{
+			"endpoint": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"key": &schema.Schema{
+			"key": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"secret_id": &schema.Schema{
+			"secret_id": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"label": &schema.Schema{
+			"label": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  client.LabelNone,
 				ForceNew: true,
 			},
-			"latest_version": &schema.Schema{
+			"latest_version": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
 			},
-			"value": &schema.Schema{
+			"value": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
