@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	// LabelNone Represents an empty label
 	LabelNone = "%00"
 )
 
@@ -24,15 +23,9 @@ var (
 	keyVaultRefContentType = "application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8"
 )
 
-type ClientBuilder struct {
-	AuthConfig   *authentication.Config
-	AppConfigUri string
-}
-
-// AppConfigClient holds all of the information required to connect to a server
-type AppConfigClient struct {
+type Client struct {
 	*autorest.Client
-	AppConfigURI string
+	Endpoint string
 }
 
 type setKeyValuePayload struct {
@@ -40,70 +33,56 @@ type setKeyValuePayload struct {
 	ContentType string `json:"content_type"`
 }
 
-// NewAppConfigurationClient instantiate a new client
-func NewAppConfigurationClient(ctx context.Context, builder ClientBuilder) (*AppConfigClient, error) {
+func NewClientCreds(endpoint string, clientID string, clientSecret string, tenantID string) (*Client, error) {
 
-	env, err := authentication.AzureEnvironmentByNameFromEndpoint(ctx, builder.AuthConfig.MetadataHost, builder.AuthConfig.Environment)
+	ccc := auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID)
+	ccc.Resource = endpoint
+
+	authorizer, err := ccc.Authorizer()
 	if err != nil {
-		return nil, fmt.Errorf("unable to find environment %q from endpoint %q: %+v", builder.AuthConfig.Environment, builder.AuthConfig.MetadataHost, err)
+		return nil, err
 	}
+	return NewClient(endpoint, authorizer)
+}
 
-	oauthConfig, err := builder.AuthConfig.BuildOAuthConfig(env.ActiveDirectoryEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("building OAuth Config: %+v", err)
-	}
-
-	sender := sender.BuildSender("AzureRM")
-
-	audience := builder.AppConfigUri
-	authorizer, err := builder.AuthConfig.GetAuthorizationToken(sender, oauthConfig, audience)
+func NewClientEnv(endpoint string) (*Client, error) {
+	authorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get authorization token for resource manager: %+v", err)
 	}
+	return NewClient(endpoint, authorizer)
+}
 
+func NewClientCli(endpoint string) (*Client, error) {
+	authorizer, err := auth.NewAuthorizerFromCLIWithResource(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	return NewClient(endpoint, authorizer)
+}
+
+func NewClientMsi(endpoint string) (*Client, error) {
+	msiConfig := auth.NewMSIConfig()
+	msiConfig.Resource = endpoint
+
+	authorizer, err := msiConfig.Authorizer()
+	if err != nil {
+		return nil, err
+	}
+	return NewClient(endpoint, authorizer)
+}
+
+func NewClient(endpoint string, authorizer autorest.Authorizer) (*Client, error) {
 	client := autorest.NewClientWithUserAgent(userAgent())
-
 	client.Authorizer = authorizer
 
-	return &AppConfigClient{
-		Client:       &client,
-		AppConfigURI: builder.AppConfigUri,
+	return &Client{
+		Client:   &client,
+		Endpoint: endpoint,
 	}, nil
 }
 
-// NewAppConfigurationClient instantiate a new client
-func BuildAppConfigurationClient(ctx context.Context, endpoint string) (*AppConfigClient, error) {
-
-	builder := authentication.Builder{
-		SubscriptionID: os.Getenv("ARM_SUBSCRIPTION_ID"),
-		ClientID:       os.Getenv("ARM_CLIENT_ID"),
-		TenantID:       os.Getenv("ARM_TENANT_ID"),
-		ClientSecret:   os.Getenv("ARM_CLIENT_SECRET"),
-		Environment:    "public",
-		MetadataHost:   os.Getenv("ARM_METADATA_HOST"),
-
-		// we intentionally only support Client Secret auth for tests (since those variables are used all over)
-		SupportsAzureCliToken:    true,
-		SupportsClientSecretAuth: true,
-	}
-
-	config, err := builder.Build()
-	if err != nil {
-		panic(fmt.Errorf("Error building ARM Client: %+v", err))
-	}
-
-	clientBuilder := ClientBuilder{
-		AuthConfig:   config,
-		AppConfigUri: endpoint,
-	}
-
-	client, err := NewAppConfigurationClient(ctx, clientBuilder)
-
-	return client, err
-}
-
-// GetKeyValue get a given App Configuration key-value
-func (client *AppConfigClient) GetKeyValue(label string, key string) (KeyValueResponse, error) {
+func (client *Client) GetKeyValue(label string, key string) (KeyValueResponse, error) {
 	result := KeyValueResponse{}
 	resp, err := client.send(
 		label,
@@ -126,18 +105,16 @@ func (client *AppConfigClient) GetKeyValue(label string, key string) (KeyValueRe
 	return result, nil
 }
 
-// SetKeyValue creates a key with the given value
-func (client *AppConfigClient) SetKeyValue(label string, key string, value string) (KeyValueResponse, error) {
+func (client *Client) SetKeyValue(label string, key string, value string) (KeyValueResponse, error) {
 	return client.setKeyValue(label, key, value, defaultContentType)
 }
 
-// SetKeyValueSecret creates a key with the given KeyVault secret ID
-func (client *AppConfigClient) SetKeyValueSecret(key string, secretID string, label string) (KeyValueResponse, error) {
+func (client *Client) SetKeyValueSecret(key string, secretID string, label string) (KeyValueResponse, error) {
 	value := fmt.Sprintf("{\"uri\":\"%s\"}", secretID)
 	return client.setKeyValue(label, key, value, keyVaultRefContentType)
 }
 
-func (client *AppConfigClient) setKeyValue(label string, key string, value string, contentType string) (KeyValueResponse, error) {
+func (client *Client) setKeyValue(label string, key string, value string, contentType string) (KeyValueResponse, error) {
 	result := KeyValueResponse{}
 	payload := setKeyValuePayload{
 		Value:       value,
@@ -167,8 +144,7 @@ func (client *AppConfigClient) setKeyValue(label string, key string, value strin
 	return result, nil
 }
 
-// DeleteKeyValue get a given App Configuration key-value
-func (client *AppConfigClient) DeleteKeyValue(label string, key string) (bool, error) {
+func (client *Client) DeleteKeyValue(label string, key string) (bool, error) {
 	resp, err := client.send(
 		label,
 		key,
@@ -199,7 +175,7 @@ func getJSON(response *http.Response, target interface{}) error {
 	return err
 }
 
-func (client *AppConfigClient) send(label string, key string, additionalDecorator ...autorest.PrepareDecorator) (*http.Response, error) {
+func (client *Client) send(label string, key string, additionalDecorator ...autorest.PrepareDecorator) (*http.Response, error) {
 	req, err := client.getPreparer(
 		label,
 		key,
@@ -230,19 +206,7 @@ func (client *AppConfigClient) send(label string, key string, additionalDecorato
 	return resp, err
 }
 
-func getAuthorizer(resource string) (autorest.Authorizer, error) {
-	authorizer, err := auth.NewAuthorizerFromCLIWithResource(resource)
-	if err != nil {
-		authorizer, err = auth.NewAuthorizerFromEnvironmentWithResource(resource)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to find a suitable authorizer")
-		}
-	}
-
-	return authorizer, nil
-}
-
-func (client *AppConfigClient) getPreparer(label string, key string, additionalDecorators ...autorest.PrepareDecorator) autorest.Preparer {
+func (client *Client) getPreparer(label string, key string, additionalDecorators ...autorest.PrepareDecorator) autorest.Preparer {
 	const apiVersion = "1.0"
 	queryParameters := map[string]interface{}{
 		"label":       label,
@@ -254,7 +218,7 @@ func (client *AppConfigClient) getPreparer(label string, key string, additionalD
 	}
 
 	decorators := []autorest.PrepareDecorator{
-		autorest.WithBaseURL(client.AppConfigURI),
+		autorest.WithBaseURL(client.Endpoint),
 		autorest.WithPathParameters("/kv/{key}", pathParameters),
 		autorest.WithQueryParameters(queryParameters),
 		client.Client.WithAuthorization(),

@@ -16,10 +16,6 @@ func dataSourceKeySecret() *schema.Resource {
 		ReadContext: dataSourceKeySecretRead,
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
 			"key": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -40,17 +36,14 @@ func dataSourceKeySecret() *schema.Resource {
 func dataSourceKeySecretRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
-	endpoint := d.Get("endpoint").(string)
 	label := d.Get("label").(string)
 	key := d.Get("key").(string)
 
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	c := meta.(*client.Client)
+	endpoint := c.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	kv, err := cl.GetKeyValue(label, key)
+	kv, err := c.GetKeyValue(label, key)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("error getting App Configuration key %s/%s: %+v", label, key, err))
 	}
@@ -68,7 +61,6 @@ func dataSourceKeySecretRead(ctx context.Context, d *schema.ResourceData, meta i
 	err = json.Unmarshal([]byte(kv.Value), &wrapper)
 
 	d.SetId(id)
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("secret_id", wrapper.URI)
 	d.Set("label", kv.Label)

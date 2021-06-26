@@ -23,11 +23,6 @@ func resourceKeySecret() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
 			"key": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -56,23 +51,20 @@ func resourceKeySecret() *schema.Resource {
 	}
 }
 
-func resourceKeySecretCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	endpoint := d.Get("endpoint").(string)
+func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
+
 	key := d.Get("key").(string)
 	value := d.Get("secret_id").(string)
 	label := d.Get("label").(string)
 	trim := d.Get("latest_version").(bool)
 
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
 	if trim {
 		value = trimVersion(value)
 	}
 
-	_, err = cl.SetKeyValueSecret(key, value, label)
+	_, err = c.SetKeyValueSecret(key, value, label)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -88,21 +80,19 @@ func resourceKeySecretCreate(ctx context.Context, d *schema.ResourceData, meta i
 	return resourceKeySecretRead(ctx, d, meta)
 }
 
-func resourceKeySecretUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	endpoint, label, key := parseID(d.Id())
+func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
+	_, label, key := parseID(d.Id())
+	c := m.(*client.Client)
+
+	endpoint := c.Endpoint
 	value := d.Get("secret_id").(string)
 	trim := d.Get("latest_version").(bool)
-
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
 
 	if trim {
 		value = trimVersion(value)
 	}
 
-	_, err = cl.SetKeyValueSecret(key, value, label)
+	_, err := c.SetKeyValueSecret(key, value, label)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -122,15 +112,12 @@ func resourceKeySecretRead(ctx context.Context, d *schema.ResourceData, m interf
 	log.Printf("[INFO] Reading resource %s", d.Id())
 	var diags diag.Diagnostics
 
-	endpoint, label, key := parseID(d.Id())
-
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	_, label, key := parseID(d.Id())
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	kv, err := cl.GetKeyValue(label, key)
+	kv, err := c.GetKeyValue(label, key)
 	if err != nil {
 		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, key)
 		d.SetId("")
@@ -144,7 +131,6 @@ func resourceKeySecretRead(ctx context.Context, d *schema.ResourceData, m interf
 	var wrapper keyVaultReferenceValue
 	err = json.Unmarshal([]byte(kv.Value), &wrapper)
 
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("value", wrapper.URI)
 	d.Set("label", kv.Label)

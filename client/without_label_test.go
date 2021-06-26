@@ -20,13 +20,12 @@ type existingKeyValueTestSuite struct {
 	uri    string
 	key    string
 	value  string
-	client *AppConfigClient
+	client *Client
 }
 
 func (s *existingKeyValueTestSuite) SetupSuite() {
-	s.uri = "https://arkia.azconfig.io"
-
-	client, err := BuildAppConfigurationClient(context.Background(), s.uri)
+	s.uri = "https://testlg.azconfig.io"
+	client, err := NewClientCli(s.uri)
 
 	if err != nil {
 		panic(err)

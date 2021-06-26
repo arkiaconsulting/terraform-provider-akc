@@ -15,10 +15,6 @@ func dataSourceKeyValue() *schema.Resource {
 		ReadContext: dataSourceKeyValueRead,
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
 			"key": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -40,14 +36,11 @@ func dataSourceKeyValueRead(ctx context.Context, d *schema.ResourceData, meta in
 	log.Printf("[INFO] Reading resource %s", d.Id())
 	var diags diag.Diagnostics
 
-	endpoint := d.Get("endpoint").(string)
 	label := d.Get("label").(string)
 	key := d.Get("key").(string)
 
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	cl := meta.(*client.Client)
+	endpoint := cl.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	kv, err := cl.GetKeyValue(label, key)
@@ -65,7 +58,6 @@ func dataSourceKeyValueRead(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	d.SetId(id)
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("value", kv.Value)
 	d.Set("label", kv.Label)

@@ -22,11 +22,6 @@ func resourceKeyValue() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
-			"endpoint": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
 			"key": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -49,24 +44,21 @@ func resourceKeyValue() *schema.Resource {
 func resourceKeyValueCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	log.Print("[INFO] Creating resource")
 
-	endpoint := d.Get("endpoint").(string)
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
+
 	key := d.Get("key").(string)
 	value := d.Get("value").(string)
 	label := d.Get("label").(string)
 
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
 	if d.IsNewResource() {
-		_, err := cl.GetKeyValue(label, key)
+		_, err := c.GetKeyValue(label, key)
 		if err == nil {
 			return diag.FromErr(fmt.Errorf("The resource needs to be imported: %s", "akc_key_value"))
 		}
 	}
 
-	_, err = cl.SetKeyValue(label, key, value)
+	_, err := c.SetKeyValue(label, key, value)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -85,14 +77,12 @@ func resourceKeyValueRead(ctx context.Context, d *schema.ResourceData, m interfa
 	log.Printf("[INFO] Reading resource %s", d.Id())
 	var diags diag.Diagnostics
 
-	endpoint, label, key := parseID(d.Id())
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	_, label, key := parseID(d.Id())
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	result, err := cl.GetKeyValue(label, key)
+	result, err := c.GetKeyValue(label, key)
 	if err != nil {
 		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, key)
 		d.SetId("")
@@ -103,7 +93,6 @@ func resourceKeyValueRead(ctx context.Context, d *schema.ResourceData, m interfa
 		result.Label = client.LabelNone
 	}
 
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("value", result.Value)
 	d.Set("label", result.Label)
@@ -116,15 +105,12 @@ func resourceKeyValueRead(ctx context.Context, d *schema.ResourceData, m interfa
 func resourceKeyValueUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	log.Printf("[INFO] Updating resource %s", d.Id())
 
-	endpoint, label, key := parseID(d.Id())
+	_, label, key := parseID(d.Id())
+	c := m.(*client.Client)
+	endpoint := c.Endpoint
 	value := d.Get("value").(string)
 
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	_, err = cl.SetKeyValue(label, key, value)
+	_, err := c.SetKeyValue(label, key, value)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -143,14 +129,11 @@ func resourceKeyValueDelete(ctx context.Context, d *schema.ResourceData, m inter
 	log.Printf("[INFO] Deleting resource %s", d.Id())
 	var diags diag.Diagnostics
 
-	endpoint, label, key := parseID(d.Id())
+	_, label, key := parseID(d.Id())
 
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	c := m.(*client.Client)
 
-	_, err = cl.DeleteKeyValue(label, key)
+	_, err := c.DeleteKeyValue(label, key)
 	if err != nil {
 		return diag.FromErr(err)
 	}
