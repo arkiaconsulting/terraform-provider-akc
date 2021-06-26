@@ -14,20 +14,20 @@ func dataSourceKeySecret() *schema.Resource {
 		Read: dataSourceKeySecretRead,
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": &schema.Schema{
+			"endpoint": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"key": &schema.Schema{
+			"key": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"label": &schema.Schema{
+			"label": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  client.LabelNone,
 			},
-			"secret_id": &schema.Schema{
+			"secret_id": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
