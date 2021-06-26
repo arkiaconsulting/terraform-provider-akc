@@ -1,8 +1,12 @@
 package client
 
 import (
+	"context"
+	"fmt"
+	"os"
 	"testing"
 
+	"github.com/hashicorp/go-azure-helpers/authentication"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -22,8 +26,30 @@ type existingKeyValueTestSuite struct {
 }
 
 func (s *existingKeyValueTestSuite) SetupSuite() {
-	s.uri = "https://testlg.azconfig.io"
-	client, err := NewAppConfigurationClient(s.uri)
+	s.uri = "https://arkia.azconfig.io"
+	builder := authentication.Builder{
+		SubscriptionID: os.Getenv("ARM_SUBSCRIPTION_ID"),
+		ClientID:       os.Getenv("ARM_CLIENT_ID"),
+		TenantID:       os.Getenv("ARM_TENANT_ID"),
+		ClientSecret:   os.Getenv("ARM_CLIENT_SECRET"),
+		Environment:    "public",
+		MetadataHost:   os.Getenv("ARM_METADATA_HOST"),
+
+		// we intentionally only support Client Secret auth for tests (since those variables are used all over)
+		SupportsClientSecretAuth: true,
+	}
+
+	config, err := builder.Build()
+	if err != nil {
+		panic(fmt.Errorf("Error building ARM Client: %+v", err))
+	}
+
+	clientBuilder := ClientBuilder{
+		AuthConfig:   config,
+		AppConfigUri: s.uri,
+	}
+
+	client, err := NewAppConfigurationClient(context.TODO(), clientBuilder)
 
 	if err != nil {
 		panic(err)

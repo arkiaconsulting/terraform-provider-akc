@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/arkiaconsulting/terraform-provider-akc/utils"
+	"github.com/hashicorp/go-azure-helpers/authentication"
+	"github.com/hashicorp/go-azure-helpers/sender"
 )
 
 var (
@@ -19,6 +22,11 @@ var (
 	defaultContentType     = "application/vnd.microsoft.appconfig.kv+json"
 	keyVaultRefContentType = "application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8"
 )
+
+type ClientBuilder struct {
+	AuthConfig   *authentication.Config
+	AppConfigUri string
+}
 
 // AppConfigClient holds all of the information required to connect to a server
 type AppConfigClient struct {
@@ -32,18 +40,33 @@ type setKeyValuePayload struct {
 }
 
 // NewAppConfigurationClient instantiate a new client
-func NewAppConfigurationClient(appConfigURI string) (*AppConfigClient, error) {
-	client := autorest.NewClientWithUserAgent(userAgent())
-	authorizer, err := getAuthorizer(appConfigURI)
+func NewAppConfigurationClient(ctx context.Context, builder ClientBuilder) (*AppConfigClient, error) {
+
+	env, err := authentication.AzureEnvironmentByNameFromEndpoint(ctx, builder.AuthConfig.MetadataHost, builder.AuthConfig.Environment)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to find environment %q from endpoint %q: %+v", builder.AuthConfig.Environment, builder.AuthConfig.MetadataHost, err)
 	}
+
+	oauthConfig, err := builder.AuthConfig.BuildOAuthConfig(env.ActiveDirectoryEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("building OAuth Config: %+v", err)
+	}
+
+	sender := sender.BuildSender("AzureRM")
+
+	audience := builder.AppConfigUri
+	authorizer, err := builder.AuthConfig.GetAuthorizationToken(sender, oauthConfig, audience)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get authorization token for resource manager: %+v", err)
+	}
+
+	client := autorest.NewClientWithUserAgent(userAgent())
 
 	client.Authorizer = authorizer
 
 	return &AppConfigClient{
 		Client:       &client,
-		AppConfigURI: appConfigURI,
+		AppConfigURI: builder.AppConfigUri,
 	}, nil
 }
 

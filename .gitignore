@@ -5,3 +5,4 @@ azureenv.sh
 .vscode/
 !terraform-provider-akc_v*.exe
 .publish/
+vendor/
