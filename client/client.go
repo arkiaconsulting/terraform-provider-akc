@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -68,6 +69,37 @@ func NewAppConfigurationClient(ctx context.Context, builder ClientBuilder) (*App
 		Client:       &client,
 		AppConfigURI: builder.AppConfigUri,
 	}, nil
+}
+
+// NewAppConfigurationClient instantiate a new client
+func BuildAppConfigurationClient(ctx context.Context, endpoint string) (*AppConfigClient, error) {
+
+	builder := authentication.Builder{
+		SubscriptionID: os.Getenv("ARM_SUBSCRIPTION_ID"),
+		ClientID:       os.Getenv("ARM_CLIENT_ID"),
+		TenantID:       os.Getenv("ARM_TENANT_ID"),
+		ClientSecret:   os.Getenv("ARM_CLIENT_SECRET"),
+		Environment:    "public",
+		MetadataHost:   os.Getenv("ARM_METADATA_HOST"),
+
+		// we intentionally only support Client Secret auth for tests (since those variables are used all over)
+		SupportsAzureCliToken:    true,
+		SupportsClientSecretAuth: true,
+	}
+
+	config, err := builder.Build()
+	if err != nil {
+		panic(fmt.Errorf("Error building ARM Client: %+v", err))
+	}
+
+	clientBuilder := ClientBuilder{
+		AuthConfig:   config,
+		AppConfigUri: endpoint,
+	}
+
+	client, err := NewAppConfigurationClient(ctx, clientBuilder)
+
+	return client, err
 }
 
 // GetKeyValue get a given App Configuration key-value

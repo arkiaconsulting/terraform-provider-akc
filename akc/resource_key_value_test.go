@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccKeyValue_create(t *testing.T) {
@@ -252,33 +252,6 @@ func TestAccKeyValue_updateLabelWithLabel(t *testing.T) {
 					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
 					testCheckStoredValue(&kv, value),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKeyValue_requiresImport(t *testing.T) {
-	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
-	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
-	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { preCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testCheckKeyValueDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: buildTerraformConfigWithLabel(label, key, value),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("akc_key_value.test", "endpoint", endpointUnderTest),
-					resource.TestCheckResourceAttr("akc_key_value.test", "label", label),
-					resource.TestCheckResourceAttr("akc_key_value.test", "key", key),
-					resource.TestCheckResourceAttr("akc_key_value.test", "value", value),
-				),
-			},
-			{
-				Config:      buildTerraformConfigImport(label, key, value),
-				ExpectError: requiresImportError("akc_key_value"),
 			},
 		},
 	})

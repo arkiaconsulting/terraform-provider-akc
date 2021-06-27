@@ -1,22 +1,23 @@
 package akc
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/url"
 	"strings"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceKeySecret() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKeySecretCreate,
-		Read:   resourceKeySecretRead,
-		Update: resourceKeySecretUpdate,
-		Delete: resourceKeyValueDelete,
-		Exists: resourceKeyValueExists,
+		CreateContext: resourceKeySecretCreate,
+		ReadContext:   resourceKeySecretRead,
+		UpdateContext: resourceKeySecretUpdate,
+		DeleteContext: resourceKeyValueDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -55,65 +56,78 @@ func resourceKeySecret() *schema.Resource {
 	}
 }
 
-func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
+func resourceKeySecretCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	endpoint := d.Get("endpoint").(string)
-	client, err := client.NewAppConfigurationClient(endpoint)
 	key := d.Get("key").(string)
 	value := d.Get("secret_id").(string)
 	label := d.Get("label").(string)
 	trim := d.Get("latest_version").(bool)
 
+	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	if trim {
 		value = trimVersion(value)
 	}
 
-	_, err = client.SetKeyValueSecret(key, value, label)
+	_, err = cl.SetKeyValueSecret(key, value, label)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(id)
 	d.Set("value", value)
 
-	return resourceKeySecretRead(d, m)
+	return resourceKeySecretRead(ctx, d, meta)
 }
 
-func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
+func resourceKeySecretUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	endpoint, label, key := parseID(d.Id())
-	client, err := client.NewAppConfigurationClient(endpoint)
 	value := d.Get("secret_id").(string)
 	trim := d.Get("latest_version").(bool)
 
+	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	if trim {
 		value = trimVersion(value)
 	}
 
-	_, err = client.SetKeyValueSecret(key, value, label)
+	_, err = cl.SetKeyValueSecret(key, value, label)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(id)
 	d.Set("value", value)
 
-	return resourceKeySecretRead(d, m)
+	return resourceKeySecretRead(ctx, d, m)
 }
 
-func resourceKeySecretRead(d *schema.ResourceData, m interface{}) error {
+func resourceKeySecretRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	log.Printf("[INFO] Reading resource %s", d.Id())
+	var diags diag.Diagnostics
 
 	endpoint, label, key := parseID(d.Id())
-	cl, err := client.NewAppConfigurationClient(endpoint)
+
+	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	kv, err := cl.GetKeyValue(label, key)
@@ -137,7 +151,7 @@ func resourceKeySecretRead(d *schema.ResourceData, m interface{}) error {
 
 	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, wrapper.URI)
 
-	return nil
+	return diags
 }
 
 func trimVersion(s string) string {
