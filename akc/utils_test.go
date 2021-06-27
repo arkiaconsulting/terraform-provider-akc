@@ -1,6 +1,7 @@
 package akc
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func preCheck(t *testing.T) {
@@ -143,9 +144,9 @@ func testCheckKeyValueDestroy(state *terraform.State) error {
 		endpoint := rs.Primary.Attributes["endpoint"]
 		log.Printf("[INFO] Checking that KV is destroyed %s/%s/%s", endpoint, label, key)
 
-		cl, err := client.NewAppConfigurationClient(endpoint)
+		cl, err := client.BuildAppConfigurationClient(context.Background(), endpoint)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		_, err = cl.GetKeyValue(label, key)
@@ -178,9 +179,10 @@ func testCheckKeyValueExists(resource string, kv *client.KeyValueResponse) resou
 		key := rs.Primary.Attributes["key"]
 		value := rs.Primary.Attributes["value"]
 		label := rs.Primary.Attributes["label"]
-		cl, err := client.NewAppConfigurationClient(endpoint)
+
+		cl, err := client.BuildAppConfigurationClient(context.Background(), endpoint)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		result, err := cl.GetKeyValue(label, key)
@@ -217,9 +219,10 @@ func testCheckKeyValueSecretExists(resource string, kv *client.KeyValueResponse)
 		endpoint := rs.Primary.Attributes["endpoint"]
 		key := rs.Primary.Attributes["key"]
 		label := rs.Primary.Attributes["label"]
-		cl, err := client.NewAppConfigurationClient(endpoint)
+
+		cl, err := client.BuildAppConfigurationClient(context.Background(), endpoint)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		result, err := cl.GetKeyValue(label, key)
