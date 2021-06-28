@@ -1,17 +1,14 @@
 package client
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/arkiaconsulting/terraform-provider-akc/utils"
-	"github.com/hashicorp/go-azure-helpers/authentication"
-	"github.com/hashicorp/go-azure-helpers/sender"
 )
 
 var (
@@ -87,6 +84,7 @@ func (client *Client) GetKeyValue(label string, key string) (KeyValueResponse, e
 	resp, err := client.send(
 		label,
 		key,
+		true,
 		autorest.AsGet(),
 	)
 
@@ -124,6 +122,7 @@ func (client *Client) setKeyValue(label string, key string, value string, conten
 	resp, err := client.send(
 		label,
 		key,
+		false,
 		autorest.AsContentType(defaultContentType),
 		autorest.AsPut(),
 		autorest.WithJSON(payload),
@@ -148,6 +147,7 @@ func (client *Client) DeleteKeyValue(label string, key string) (bool, error) {
 	resp, err := client.send(
 		label,
 		key,
+		false,
 		autorest.AsDelete(),
 	)
 	if err != nil {
@@ -175,7 +175,7 @@ func getJSON(response *http.Response, target interface{}) error {
 	return err
 }
 
-func (client *Client) send(label string, key string, additionalDecorator ...autorest.PrepareDecorator) (*http.Response, error) {
+func (client *Client) send(label string, key string, retry bool, additionalDecorator ...autorest.PrepareDecorator) (*http.Response, error) {
 	req, err := client.getPreparer(
 		label,
 		key,
@@ -186,7 +186,11 @@ func (client *Client) send(label string, key string, additionalDecorator ...auto
 		return nil, UnexpectedError.wrap(err)
 	}
 
-	resp, err := client.Send(req)
+	var retryDecorator autorest.SendDecorator
+	if retry {
+		retryDecorator = autorest.DoRetryForAttempts(5, 1*time.Second)
+	}
+	resp, err := client.Send(req, retryDecorator)
 	if err != nil {
 		return nil, UnexpectedError.wrap(err)
 	}
