@@ -9,8 +9,7 @@ import (
 	"regexp"
 	"testing"
 
-	"terraform-provider-akc/client"
-
+	"github.com/arkiaconsulting/terraform-provider-akc/client"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
