@@ -64,7 +64,7 @@ func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
 		value = trimVersion(value)
 	}
 
-	_, err = c.SetKeyValueSecret(key, value, label)
+	_, err := c.SetKeyValueSecret(key, value, label)
 	if err != nil {
 		return diag.FromErr(err)
 	}

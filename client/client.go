@@ -45,7 +45,7 @@ func NewClientCreds(endpoint string, clientID string, clientSecret string, tenan
 func NewClientEnv(endpoint string) (*Client, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get authorization token for resource manager: %+v", err)
+		return nil, err
 	}
 	return NewClient(endpoint, authorizer)
 }
