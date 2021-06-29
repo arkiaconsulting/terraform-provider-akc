@@ -1,4 +1,4 @@
-module terraform-provider-akc
+module github.com/arkiaconsulting/terraform-provider-akc
 
 go 1.14
 

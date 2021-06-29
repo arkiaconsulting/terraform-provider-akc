@@ -1,8 +1,7 @@
 package akc
 
 import (
-	"terraform-provider-akc/client"
-
+	"github.com/arkiaconsulting/terraform-provider-akc/client"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
