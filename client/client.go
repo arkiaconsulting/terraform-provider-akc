@@ -42,14 +42,6 @@ func NewClientCreds(endpoint string, clientID string, clientSecret string, tenan
 	return NewClient(endpoint, authorizer)
 }
 
-func NewClientEnv(endpoint string) (*Client, error) {
-	authorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(endpoint)
-	if err != nil {
-		return nil, err
-	}
-	return NewClient(endpoint, authorizer)
-}
-
 func NewClientCli(endpoint string) (*Client, error) {
 	authorizer, err := auth.NewAuthorizerFromCLIWithResource(endpoint)
 	if err != nil {

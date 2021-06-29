@@ -11,30 +11,35 @@ func Provider() *schema.Provider {
 		Schema: map[string]*schema.Schema{
 			"endpoint": {
 				Type:        schema.TypeString,
+				Description: "App Configuration url to target",
 				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("AZAPPCONF_ENDPOINT", nil),
+				DefaultFunc: schema.EnvDefaultFunc("AKC_ENDPOINT", nil),
 			},
 			"client_id": {
 				Type:        schema.TypeString,
+				Description: "Azure AD Client Id",
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("ARM_CLIENT_ID", nil),
 			},
 			"client_secret": {
 				Type:        schema.TypeString,
+				Description: "Azure AD Client Secret",
 				Optional:    true,
 				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("ARM_CLIENT_SECRET", nil),
 			},
 			"tenant_id": {
 				Type:        schema.TypeString,
+				Description: "Azure AD Tenant ID",
 				Optional:    true,
 				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("ARM_TENANT_ID", nil),
 			},
-			"auth_method": {
-				Type:        schema.TypeString,
+			"msi": {
+				Type:        schema.TypeBool,
+				Description: "Use msi if available, will fail if not in a MSI context",
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("AZAPPCONF_AUTH_METHOD", nil),
+				Default:     false,
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -51,28 +56,18 @@ func Provider() *schema.Provider {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	endpoint := d.Get("endpoint").(string)
+
+	if d.Get("msi").(bool) {
+		return client.NewClientMsi(endpoint)
+	}
+
 	clientId := d.Get("client_id").(string)
 	clientSecret := d.Get("client_secret").(string)
 	tenantId := d.Get("tenant_id").(string)
-	authMethod := d.Get("auth_method").(string)
 
-	if (clientId != "") && (clientSecret != "") {
-		authMethod = "creds"
+	if (clientId != "") && (clientSecret != "") && (tenantId != "") {
+		return client.NewClientCreds(endpoint, clientId, clientSecret, tenantId)
 	}
 
-	var c *client.Client
-	var err error
-
-	switch authMethod {
-	case "creds":
-		c, err = client.NewClientCreds(endpoint, clientId, clientSecret, tenantId)
-	case "cli":
-		c, err = client.NewClientCli(endpoint)
-	case "msi":
-		c, err = client.NewClientMsi(endpoint)
-	case "env":
-	default:
-		c, err = client.NewClientEnv(endpoint)
-	}
-	return c, err
+	return client.NewClientCli(endpoint)
 }
