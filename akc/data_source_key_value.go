@@ -1,18 +1,16 @@
 package akc
 
 import (
-	"context"
 	"fmt"
 	"log"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceKeyValue() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKeyValueRead,
+		Read: dataSourceKeyValueRead,
 
 		Schema: map[string]*schema.Schema{
 			"key": {
@@ -32,9 +30,8 @@ func dataSourceKeyValue() *schema.Resource {
 	}
 }
 
-func dataSourceKeyValueRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKeyValueRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
-	var diags diag.Diagnostics
 
 	label := d.Get("label").(string)
 	key := d.Get("key").(string)
@@ -45,7 +42,7 @@ func dataSourceKeyValueRead(ctx context.Context, d *schema.ResourceData, meta in
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	kv, err := cl.GetKeyValue(label, key)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("error getting App Configuration key %s/%s: %+v", label, key, err))
+		return fmt.Errorf("error getting App Configuration key %s/%s: %+v", label, key, err)
 	}
 
 	if kv.Label == "" {
@@ -54,7 +51,7 @@ func dataSourceKeyValueRead(ctx context.Context, d *schema.ResourceData, meta in
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	d.SetId(id)
@@ -64,5 +61,5 @@ func dataSourceKeyValueRead(ctx context.Context, d *schema.ResourceData, meta in
 
 	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, kv.Value)
 
-	return diags
+	return nil
 }

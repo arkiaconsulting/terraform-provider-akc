@@ -42,21 +42,21 @@ func resourceKeyValue() *schema.Resource {
 func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 	log.Print("[INFO] Creating resource")
 
-	c := m.(*client.Client)
-	endpoint := c.Endpoint
+	cl := m.(*client.Client)
+	endpoint := cl.Endpoint
 
 	key := d.Get("key").(string)
 	value := d.Get("value").(string)
 	label := d.Get("label").(string)
 
 	if d.IsNewResource() {
-		_, err := c.GetKeyValue(label, key)
+		_, err := cl.GetKeyValue(label, key)
 		if err == nil {
 			return fmt.Errorf("The resource needs to be imported: %s", "akc_key_value")
 		}
 	}
 
-	_, err := c.SetKeyValue(label, key, value)
+	_, err := cl.SetKeyValue(label, key, value)
 	if err != nil {
 		return err
 	}
@@ -75,11 +75,11 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
 	_, label, key := parseID(d.Id())
-	c := m.(*client.Client)
-	endpoint := c.Endpoint
+	cl := m.(*client.Client)
+	endpoint := cl.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	result, err := c.GetKeyValue(label, key)
+	result, err := cl.GetKeyValue(label, key)
 	if err != nil {
 		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, key)
 		d.SetId("")
@@ -103,11 +103,11 @@ func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Updating resource %s", d.Id())
 
 	_, label, key := parseID(d.Id())
-	c := m.(*client.Client)
-	endpoint := c.Endpoint
+	cl := m.(*client.Client)
+	endpoint := cl.Endpoint
 	value := d.Get("value").(string)
 
-	_, err := c.SetKeyValue(label, key, value)
+	_, err := cl.SetKeyValue(label, key, value)
 	if err != nil {
 		return err
 	}
@@ -127,9 +127,9 @@ func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 
 	_, label, key := parseID(d.Id())
 
-	c := m.(*client.Client)
+	cl := m.(*client.Client)
 
-	_, err := c.DeleteKeyValue(label, key)
+	_, err := cl.DeleteKeyValue(label, key)
 	if err != nil {
 		return err
 	}

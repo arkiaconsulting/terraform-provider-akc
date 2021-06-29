@@ -50,8 +50,8 @@ func resourceKeySecret() *schema.Resource {
 }
 
 func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
-	c := m.(*client.Client)
-	endpoint := c.Endpoint
+	cl := m.(*client.Client)
+	endpoint := cl.Endpoint
 
 	key := d.Get("key").(string)
 	value := d.Get("secret_id").(string)
@@ -62,7 +62,7 @@ func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
 		value = trimVersion(value)
 	}
 
-	_, err := c.SetKeyValueSecret(key, value, label)
+	_, err := cl.SetKeyValueSecret(key, value, label)
 	if err != nil {
 		return err
 	}
@@ -80,9 +80,9 @@ func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
 
 func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
 	_, label, key := parseID(d.Id())
-	c := m.(*client.Client)
+	cl := m.(*client.Client)
 
-	endpoint := c.Endpoint
+	endpoint := cl.Endpoint
 	value := d.Get("secret_id").(string)
 	trim := d.Get("latest_version").(bool)
 
@@ -90,7 +90,7 @@ func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
 		value = trimVersion(value)
 	}
 
-	_, err := c.SetKeyValueSecret(key, value, label)
+	_, err := cl.SetKeyValueSecret(key, value, label)
 	if err != nil {
 		return err
 	}
@@ -110,11 +110,11 @@ func resourceKeySecretRead(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
 	_, label, key := parseID(d.Id())
-	c := m.(*client.Client)
-	endpoint := c.Endpoint
+	cl := m.(*client.Client)
+	endpoint := cl.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	kv, err := c.GetKeyValue(label, key)
+	kv, err := cl.GetKeyValue(label, key)
 	if err != nil {
 		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, key)
 		d.SetId("")

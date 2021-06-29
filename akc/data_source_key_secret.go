@@ -1,19 +1,17 @@
 package akc
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceKeySecret() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKeySecretRead,
+		Read: dataSourceKeySecretRead,
 
 		Schema: map[string]*schema.Schema{
 			"key": {
@@ -33,19 +31,19 @@ func dataSourceKeySecret() *schema.Resource {
 	}
 }
 
-func dataSourceKeySecretRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKeySecretRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
 	label := d.Get("label").(string)
 	key := d.Get("key").(string)
 
-	c := meta.(*client.Client)
-	endpoint := c.Endpoint
+	cl := meta.(*client.Client)
+	endpoint := cl.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	kv, err := c.GetKeyValue(label, key)
+	kv, err := cl.GetKeyValue(label, key)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("error getting App Configuration key %s/%s: %+v", label, key, err))
+		return fmt.Errorf("error getting App Configuration key %s/%s: %+v", label, key, err)
 	}
 
 	if kv.Label == "" {
@@ -54,7 +52,7 @@ func dataSourceKeySecretRead(ctx context.Context, d *schema.ResourceData, meta i
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	var wrapper keyVaultReferenceValue
