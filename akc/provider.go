@@ -28,6 +28,7 @@ func Provider() *schema.Provider {
 			"tenant_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("ARM_TENANT_ID", nil),
 			},
 			"auth_method": {
