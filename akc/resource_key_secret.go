@@ -1,23 +1,21 @@
 package akc
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/url"
 	"strings"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceKeySecret() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeySecretCreate,
-		ReadContext:   resourceKeySecretRead,
-		UpdateContext: resourceKeySecretUpdate,
-		DeleteContext: resourceKeyValueDelete,
+		Create: resourceKeySecretCreate,
+		Read:   resourceKeySecretRead,
+		Update: resourceKeySecretUpdate,
+		Delete: resourceKeyValueDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -66,18 +64,18 @@ func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
 
 	_, err := c.SetKeyValueSecret(key, value, label)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	d.SetId(id)
 	d.Set("value", value)
 
-	return resourceKeySecretRead(ctx, d, meta)
+	return resourceKeySecretRead(d, m)
 }
 
 func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
@@ -94,23 +92,22 @@ func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
 
 	_, err := c.SetKeyValueSecret(key, value, label)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	d.SetId(id)
 	d.Set("value", value)
 
-	return resourceKeySecretRead(ctx, d, m)
+	return resourceKeySecretRead(d, m)
 }
 
-func resourceKeySecretRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKeySecretRead(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
-	var diags diag.Diagnostics
 
 	_, label, key := parseID(d.Id())
 	c := m.(*client.Client)
@@ -137,7 +134,7 @@ func resourceKeySecretRead(ctx context.Context, d *schema.ResourceData, m interf
 
 	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, wrapper.URI)
 
-	return diags
+	return nil
 }
 
 func trimVersion(s string) string {

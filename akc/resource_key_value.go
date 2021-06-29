@@ -1,25 +1,23 @@
 package akc
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/url"
 	"strings"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceKeyValue() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeyValueCreate,
-		ReadContext:   resourceKeyValueRead,
-		UpdateContext: resourceKeyValueUpdate,
-		DeleteContext: resourceKeyValueDelete,
+		Create: resourceKeyValueCreate,
+		Read:   resourceKeyValueRead,
+		Update: resourceKeyValueUpdate,
+		Delete: resourceKeyValueDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
 			"key": {
@@ -41,7 +39,7 @@ func resourceKeyValue() *schema.Resource {
 	}
 }
 
-func resourceKeyValueCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 	log.Print("[INFO] Creating resource")
 
 	c := m.(*client.Client)
@@ -54,28 +52,27 @@ func resourceKeyValueCreate(ctx context.Context, d *schema.ResourceData, m inter
 	if d.IsNewResource() {
 		_, err := c.GetKeyValue(label, key)
 		if err == nil {
-			return diag.FromErr(fmt.Errorf("The resource needs to be imported: %s", "akc_key_value"))
+			return fmt.Errorf("The resource needs to be imported: %s", "akc_key_value")
 		}
 	}
 
 	_, err := c.SetKeyValue(label, key, value)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	d.SetId(id)
 
-	return resourceKeyValueRead(ctx, d, m)
+	return resourceKeyValueRead(d, m)
 }
 
-func resourceKeyValueRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
-	var diags diag.Diagnostics
 
 	_, label, key := parseID(d.Id())
 	c := m.(*client.Client)
@@ -99,10 +96,10 @@ func resourceKeyValueRead(ctx context.Context, d *schema.ResourceData, m interfa
 
 	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, result.Value)
 
-	return diags
+	return nil
 }
 
-func resourceKeyValueUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Updating resource %s", d.Id())
 
 	_, label, key := parseID(d.Id())
@@ -112,22 +109,21 @@ func resourceKeyValueUpdate(ctx context.Context, d *schema.ResourceData, m inter
 
 	_, err := c.SetKeyValue(label, key, value)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	d.SetId(id)
 
-	return resourceKeyValueRead(ctx, d, m)
+	return resourceKeyValueRead(d, m)
 }
 
-func resourceKeyValueDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Deleting resource %s", d.Id())
-	var diags diag.Diagnostics
 
 	_, label, key := parseID(d.Id())
 
@@ -135,12 +131,12 @@ func resourceKeyValueDelete(ctx context.Context, d *schema.ResourceData, m inter
 
 	_, err := c.DeleteKeyValue(label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	d.SetId("")
 
-	return diags
+	return nil
 }
 
 func formatID(endpoint string, label string, key string) (string, error) {
