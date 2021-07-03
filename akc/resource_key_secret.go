@@ -1,54 +1,47 @@
 package akc
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/url"
 	"strings"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceKeySecret() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKeySecretCreate,
-		ReadContext:   resourceKeySecretRead,
-		UpdateContext: resourceKeySecretUpdate,
-		DeleteContext: resourceKeyValueDelete,
+		Create: resourceKeySecretCreate,
+		Read:   resourceKeySecretRead,
+		Update: resourceKeySecretUpdate,
+		Delete: resourceKeyValueDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": &schema.Schema{
+			"key": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"key": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"secret_id": &schema.Schema{
+			"secret_id": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"label": &schema.Schema{
+			"label": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  client.LabelNone,
 				ForceNew: true,
 			},
-			"latest_version": &schema.Schema{
+			"latest_version": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
 			},
-			"value": &schema.Schema{
+			"value": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -56,78 +49,69 @@ func resourceKeySecret() *schema.Resource {
 	}
 }
 
-func resourceKeySecretCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	endpoint := d.Get("endpoint").(string)
+func resourceKeySecretCreate(d *schema.ResourceData, m interface{}) error {
+	cl := m.(*client.Client)
+	endpoint := cl.Endpoint
+
 	key := d.Get("key").(string)
 	value := d.Get("secret_id").(string)
 	label := d.Get("label").(string)
 	trim := d.Get("latest_version").(bool)
 
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
 	if trim {
 		value = trimVersion(value)
 	}
 
-	_, err = cl.SetKeyValueSecret(key, value, label)
+	_, err := cl.SetKeyValueSecret(key, value, label)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	d.SetId(id)
 	d.Set("value", value)
 
-	return resourceKeySecretRead(ctx, d, meta)
+	return resourceKeySecretRead(d, m)
 }
 
-func resourceKeySecretUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	endpoint, label, key := parseID(d.Id())
+func resourceKeySecretUpdate(d *schema.ResourceData, m interface{}) error {
+	_, label, key := parseID(d.Id())
+	cl := m.(*client.Client)
+
+	endpoint := cl.Endpoint
 	value := d.Get("secret_id").(string)
 	trim := d.Get("latest_version").(bool)
 
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
 	if trim {
 		value = trimVersion(value)
 	}
 
-	_, err = cl.SetKeyValueSecret(key, value, label)
+	_, err := cl.SetKeyValueSecret(key, value, label)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	d.SetId(id)
 	d.Set("value", value)
 
-	return resourceKeySecretRead(ctx, d, m)
+	return resourceKeySecretRead(d, m)
 }
 
-func resourceKeySecretRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKeySecretRead(d *schema.ResourceData, m interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
-	var diags diag.Diagnostics
 
-	endpoint, label, key := parseID(d.Id())
-
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	_, label, key := parseID(d.Id())
+	cl := m.(*client.Client)
+	endpoint := cl.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	kv, err := cl.GetKeyValue(label, key)
@@ -144,14 +128,13 @@ func resourceKeySecretRead(ctx context.Context, d *schema.ResourceData, m interf
 	var wrapper keyVaultReferenceValue
 	err = json.Unmarshal([]byte(kv.Value), &wrapper)
 
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("value", wrapper.URI)
 	d.Set("label", kv.Label)
 
 	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, wrapper.URI)
 
-	return diags
+	return nil
 }
 
 func trimVersion(s string) string {

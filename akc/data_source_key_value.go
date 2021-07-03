@@ -1,34 +1,28 @@
 package akc
 
 import (
-	"context"
 	"fmt"
 	"log"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceKeyValue() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKeyValueRead,
+		Read: dataSourceKeyValueRead,
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": &schema.Schema{
+			"key": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"key": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-			},
-			"label": &schema.Schema{
+			"label": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  client.LabelNone,
 			},
-			"value": &schema.Schema{
+			"value": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -36,23 +30,19 @@ func dataSourceKeyValue() *schema.Resource {
 	}
 }
 
-func dataSourceKeyValueRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKeyValueRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
-	var diags diag.Diagnostics
 
-	endpoint := d.Get("endpoint").(string)
 	label := d.Get("label").(string)
 	key := d.Get("key").(string)
 
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	cl := meta.(*client.Client)
+	endpoint := cl.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	kv, err := cl.GetKeyValue(label, key)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("error getting App Configuration key %s/%s: %+v", label, key, err))
+		return fmt.Errorf("error getting App Configuration key %s/%s: %+v", label, key, err)
 	}
 
 	if kv.Label == "" {
@@ -61,16 +51,15 @@ func dataSourceKeyValueRead(ctx context.Context, d *schema.ResourceData, meta in
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	d.SetId(id)
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("value", kv.Value)
 	d.Set("label", kv.Label)
 
 	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, kv.Value)
 
-	return diags
+	return nil
 }

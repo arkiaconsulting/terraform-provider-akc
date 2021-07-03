@@ -1,35 +1,29 @@
 package akc
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceKeySecret() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKeySecretRead,
+		Read: dataSourceKeySecretRead,
 
 		Schema: map[string]*schema.Schema{
-			"endpoint": &schema.Schema{
+			"key": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"key": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-			},
-			"label": &schema.Schema{
+			"label": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  client.LabelNone,
 			},
-			"secret_id": &schema.Schema{
+			"secret_id": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -37,22 +31,19 @@ func dataSourceKeySecret() *schema.Resource {
 	}
 }
 
-func dataSourceKeySecretRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKeySecretRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
-	endpoint := d.Get("endpoint").(string)
 	label := d.Get("label").(string)
 	key := d.Get("key").(string)
 
-	cl, err := client.BuildAppConfigurationClient(ctx, endpoint)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	cl := meta.(*client.Client)
+	endpoint := cl.Endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	kv, err := cl.GetKeyValue(label, key)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("error getting App Configuration key %s/%s: %+v", label, key, err))
+		return fmt.Errorf("error getting App Configuration key %s/%s: %+v", label, key, err)
 	}
 
 	if kv.Label == "" {
@@ -61,14 +52,13 @@ func dataSourceKeySecretRead(ctx context.Context, d *schema.ResourceData, meta i
 
 	id, err := formatID(endpoint, label, key)
 	if err != nil {
-		return diag.FromErr(err)
+		return err
 	}
 
 	var wrapper keyVaultReferenceValue
 	err = json.Unmarshal([]byte(kv.Value), &wrapper)
 
 	d.SetId(id)
-	d.Set("endpoint", endpoint)
 	d.Set("key", key)
 	d.Set("secret_id", wrapper.URI)
 	d.Set("label", kv.Label)

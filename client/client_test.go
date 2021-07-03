@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -22,13 +21,12 @@ type nonExistingKeyValueWithLabelTestSuite struct {
 	key       string
 	value     string
 	secretURI string
-	client    *AppConfigClient
+	client    *Client
 }
 
 func (s *nonExistingKeyValueWithLabelTestSuite) SetupSuite() {
-	s.uri = "https://arkia.azconfig.io"
-
-	client, err := BuildAppConfigurationClient(context.Background(), s.uri)
+	s.uri = "https://testlg.azconfig.io"
+	client, err := NewClientCli(s.uri)
 
 	if err != nil {
 		panic(err)

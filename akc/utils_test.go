@@ -1,7 +1,6 @@
 package akc
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -144,7 +143,7 @@ func testCheckKeyValueDestroy(state *terraform.State) error {
 		endpoint := rs.Primary.Attributes["endpoint"]
 		log.Printf("[INFO] Checking that KV is destroyed %s/%s/%s", endpoint, label, key)
 
-		cl, err := client.BuildAppConfigurationClient(context.Background(), endpoint)
+		cl, err := client.NewClientCli(endpoint)
 		if err != nil {
 			return err
 		}
@@ -179,8 +178,7 @@ func testCheckKeyValueExists(resource string, kv *client.KeyValueResponse) resou
 		key := rs.Primary.Attributes["key"]
 		value := rs.Primary.Attributes["value"]
 		label := rs.Primary.Attributes["label"]
-
-		cl, err := client.BuildAppConfigurationClient(context.Background(), endpoint)
+		cl, err := client.NewClientCli(endpoint)
 		if err != nil {
 			return err
 		}
@@ -219,8 +217,7 @@ func testCheckKeyValueSecretExists(resource string, kv *client.KeyValueResponse)
 		endpoint := rs.Primary.Attributes["endpoint"]
 		key := rs.Primary.Attributes["key"]
 		label := rs.Primary.Attributes["label"]
-
-		cl, err := client.BuildAppConfigurationClient(context.Background(), endpoint)
+		cl, err := client.NewClientCli(endpoint)
 		if err != nil {
 			return err
 		}

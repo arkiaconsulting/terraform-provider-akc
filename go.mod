@@ -3,20 +3,15 @@ module github.com/arkiaconsulting/terraform-provider-akc
 go 1.14
 
 require (
-	github.com/Azure/go-autorest/autorest v0.11.18
+	cloud.google.com/go v0.66.0 // indirect
+	github.com/Azure/go-autorest/autorest v0.10.0
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
-	github.com/agext/levenshtein v1.2.2
+	github.com/aws/aws-sdk-go v1.34.29 // indirect
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/hashicorp/errwrap v1.0.0
-	github.com/hashicorp/go-azure-helpers v0.16.5
-	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hashicorp/go-version v1.3.0
-	github.com/hashicorp/hcl/v2 v2.3.0
-	github.com/hashicorp/terraform-plugin-sdk v1.9.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
-	github.com/mitchellh/copystructure v1.2.0
-	github.com/mitchellh/reflectwalk v1.0.2
+	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/zclconf/go-cty v1.8.4
+	golang.org/x/mod v0.3.1-0.20200828183125-ce943fd02449 // indirect
+	google.golang.org/api v0.32.0 // indirect
+	google.golang.org/genproto v0.0.0-20200923140941-5646d36feee1 // indirect
 )
