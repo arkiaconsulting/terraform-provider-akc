@@ -142,6 +142,9 @@ func resourceKeySecretRead(d *schema.ResourceData, meta interface{}) error {
 
 	var wrapper keyVaultReferenceValue
 	err = json.Unmarshal([]byte(kv.Value), &wrapper)
+	if err != nil {
+		return err
+	}
 
 	d.Set("key", key)
 	d.Set("value", wrapper.URI)
