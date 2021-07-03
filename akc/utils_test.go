@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"regexp"
 	"testing"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
@@ -75,17 +74,6 @@ resource "akc_key_secret" "test" {
   latest_version = %t
 }
 `, endpointUnderTest, label, key, secretID, latestVersion)
-}
-
-func buildTerraformConfigImport(label string, key string, value string) string {
-	return fmt.Sprintf(`
-resource "akc_key_value" "import" {
-  endpoint     = "%s"
-  label = "%s"
-  key = "%s"
-  value = "%s"
-}
-`, endpointUnderTest, label, key, value)
 }
 
 func buildTerraformConfigDataSourceKeyValue(key string) string {
@@ -271,9 +259,4 @@ func testCheckStoredValue(kv *client.KeyValueResponse, expectedValue string) res
 
 		return nil
 	}
-}
-
-func requiresImportError(resourceName string) *regexp.Regexp {
-	message := "The resource needs to be imported: %s"
-	return regexp.MustCompile(fmt.Sprintf(message, resourceName))
 }

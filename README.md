@@ -70,12 +70,12 @@ The provider uses the current Azure CLI credentials if available, and fall back 
 
 The identity must have be assigned the RBAC role `App Configuration Data Owner`, or at least `App Configuration Data Reader` in order to use the data source.
 
-If you don't want to connect using Azure CLI credentials, you must configure the following environment variables:
+If you don't want to connect using Azure CLI credentials, you must configure the following environment variables (terraform-azurerm standard):
 ```sh
-export AZURE_CLIENT_ID=XXXXXXXX-XXX
-export AZURE_SUBSCRIPTION_ID=XXXXXXXX-XXX
-export AZURE_TENANT_ID=XXXXXXXX-XXX
-export AZURE_CLIENT_SECRET=XXXXXXX
+export ARM_CLIENT_ID=XXXXXXXX-XXX
+export ARM_SUBSCRIPTION_ID=XXXXXXXX-XXX
+export ARM_TENANT_ID=XXXXXXXX-XXX
+export ARM_CLIENT_SECRET=XXXXXXX
 ```
 
 ## Installation
