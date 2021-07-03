@@ -178,11 +178,15 @@ func (client *Client) send(label string, key string, retry bool, additionalDecor
 		return nil, UnexpectedError.wrap(err)
 	}
 
+	var resp *http.Response
 	var retryDecorator autorest.SendDecorator
 	if retry {
 		retryDecorator = autorest.DoRetryForAttempts(5, 1*time.Second)
+		resp, err = client.Send(req, retryDecorator)
+	} else {
+		resp, err = client.Send(req)
 	}
-	resp, err := client.Send(req, retryDecorator)
+
 	if err != nil {
 		return nil, UnexpectedError.wrap(err)
 	}
