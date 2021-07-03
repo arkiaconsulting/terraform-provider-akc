@@ -9,12 +9,6 @@ import (
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"endpoint": {
-				Type:        schema.TypeString,
-				Description: "App Configuration url to target",
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("AKC_ENDPOINT", nil),
-			},
 			"client_id": {
 				Type:        schema.TypeString,
 				Description: "Azure AD Client Id",
@@ -55,10 +49,10 @@ func Provider() *schema.Provider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	endpoint := d.Get("endpoint").(string)
-
 	if d.Get("msi").(bool) {
-		return client.NewClientMsi(endpoint)
+		return func(endpoint string) (*client.Client, error) {
+			return client.NewClientMsi(endpoint)
+		}, nil
 	}
 
 	clientId := d.Get("client_id").(string)
@@ -66,8 +60,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	tenantId := d.Get("tenant_id").(string)
 
 	if (clientId != "") && (clientSecret != "") && (tenantId != "") {
-		return client.NewClientCreds(endpoint, clientId, clientSecret, tenantId)
+		return func(endpoint string) (*client.Client, error) {
+			return client.NewClientCreds(endpoint, clientId, clientSecret, tenantId)
+		}, nil
 	}
 
-	return client.NewClientCli(endpoint)
+	return func(endpoint string) (*client.Client, error) {
+		return client.NewClientCli(endpoint)
+	}, nil
 }

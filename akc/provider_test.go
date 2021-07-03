@@ -10,7 +10,7 @@ var testProviders = map[string]*schema.Provider{
 	"akc": Provider(),
 }
 
-const appConfigHost = "arkia.azconfig.io"
+const appConfigHost = "testlg.azconfig.io"
 const endpointUnderTest = "https://" + appConfigHost
 
 func TestProvider(t *testing.T) {

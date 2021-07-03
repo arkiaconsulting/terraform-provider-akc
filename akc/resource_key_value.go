@@ -17,9 +17,13 @@ func resourceKeyValue() *schema.Resource {
 		Update: resourceKeyValueUpdate,
 		Delete: resourceKeyValueDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
+			"endpoint": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
 			"key": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -39,24 +43,27 @@ func resourceKeyValue() *schema.Resource {
 	}
 }
 
-func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
+func resourceKeyValueCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Print("[INFO] Creating resource")
 
-	cl := m.(*client.Client)
-	endpoint := cl.Endpoint
-
+	endpoint := d.Get("endpoint").(string)
 	key := d.Get("key").(string)
 	value := d.Get("value").(string)
 	label := d.Get("label").(string)
 
+	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
+	if err != nil {
+		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
+	}
+
 	if d.IsNewResource() {
 		_, err := cl.GetKeyValue(label, key)
 		if err == nil {
-			return fmt.Errorf("The resource needs to be imported: %s", "akc_key_value")
+			return fmt.Errorf("the resource needs to be imported: %s", "akc_key_value")
 		}
 	}
 
-	_, err := cl.SetKeyValue(label, key, value)
+	_, err = cl.SetKeyValue(label, key, value)
 	if err != nil {
 		return err
 	}
@@ -68,15 +75,18 @@ func resourceKeyValueCreate(d *schema.ResourceData, m interface{}) error {
 
 	d.SetId(id)
 
-	return resourceKeyValueRead(d, m)
+	return resourceKeyValueRead(d, meta)
 }
 
-func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
+func resourceKeyValueRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
-	_, label, key := parseID(d.Id())
-	cl := m.(*client.Client)
-	endpoint := cl.Endpoint
+	endpoint, label, key := parseID(d.Id())
+
+	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
+	if err != nil {
+		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
+	}
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	result, err := cl.GetKeyValue(label, key)
@@ -93,21 +103,26 @@ func resourceKeyValueRead(d *schema.ResourceData, m interface{}) error {
 	d.Set("key", key)
 	d.Set("value", result.Value)
 	d.Set("label", result.Label)
+	d.Set("endpoint", endpoint)
 
 	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, result.Value)
 
 	return nil
 }
 
-func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
+func resourceKeyValueUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Updating resource %s", d.Id())
 
-	_, label, key := parseID(d.Id())
-	cl := m.(*client.Client)
-	endpoint := cl.Endpoint
+	endpoint, label, key := parseID(d.Id())
+
 	value := d.Get("value").(string)
 
-	_, err := cl.SetKeyValue(label, key, value)
+	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
+	if err != nil {
+		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
+	}
+
+	_, err = cl.SetKeyValue(label, key, value)
 	if err != nil {
 		return err
 	}
@@ -119,17 +134,20 @@ func resourceKeyValueUpdate(d *schema.ResourceData, m interface{}) error {
 
 	d.SetId(id)
 
-	return resourceKeyValueRead(d, m)
+	return resourceKeyValueRead(d, meta)
 }
 
-func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
+func resourceKeyValueDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Deleting resource %s", d.Id())
 
-	_, label, key := parseID(d.Id())
+	endpoint, label, key := parseID(d.Id())
 
-	cl := m.(*client.Client)
+	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
+	if err != nil {
+		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
+	}
 
-	_, err := cl.DeleteKeyValue(label, key)
+	_, err = cl.DeleteKeyValue(label, key)
 	if err != nil {
 		return err
 	}
@@ -142,7 +160,7 @@ func resourceKeyValueDelete(d *schema.ResourceData, m interface{}) error {
 func formatID(endpoint string, label string, key string) (string, error) {
 	url, err := url.Parse(endpoint)
 	if err != nil {
-		return "", fmt.Errorf("Unable to parse the given endpoint %s", endpoint)
+		return "", fmt.Errorf("unable to parse the given endpoint %s", endpoint)
 	}
 
 	name := url.Host
