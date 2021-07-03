@@ -6,3 +6,4 @@ azureenv.sh
 !terraform-provider-akc_v*.exe
 .publish/
 vendor/
+.env

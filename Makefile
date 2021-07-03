@@ -3,7 +3,7 @@ HOSTNAME=github.com
 NAMESPACE=arkiaconsulting
 NAME=akc
 BINARY=terraform-provider-${NAME}
-VERSION=0.0.2
+VERSION=0.0.10
 OS_ARCH=linux_amd64
 
 default: install

@@ -13,6 +13,10 @@ func dataSourceKeyValue() *schema.Resource {
 		Read: dataSourceKeyValueRead,
 
 		Schema: map[string]*schema.Schema{
+			"endpoint": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
 			"key": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -33,11 +37,14 @@ func dataSourceKeyValue() *schema.Resource {
 func dataSourceKeyValueRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Reading resource %s", d.Id())
 
+	endpoint := d.Get("endpoint").(string)
 	label := d.Get("label").(string)
 	key := d.Get("key").(string)
 
-	cl := meta.(*client.Client)
-	endpoint := cl.Endpoint
+	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
+	if err != nil {
+		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
+	}
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	kv, err := cl.GetKeyValue(label, key)
