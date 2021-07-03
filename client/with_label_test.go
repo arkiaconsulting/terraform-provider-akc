@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,13 +19,12 @@ type existingKeyValueWithLabelTestSuite struct {
 	label  string
 	key    string
 	value  string
-	client *AppConfigClient
+	client *Client
 }
 
 func (s *existingKeyValueWithLabelTestSuite) SetupSuite() {
-	s.uri = "https://arkia.azconfig.io"
-
-	client, err := BuildAppConfigurationClient(context.Background(), s.uri)
+	s.uri = "https://testlg.azconfig.io"
+	client, err := NewClientCli(s.uri)
 
 	if err != nil {
 		panic(err)
