@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -12,12 +14,18 @@ import (
 )
 
 var (
-	LabelNone = "%00"
+	LabelNone     = "%00"
+	FeaturePrefix = ".appconfig.featureflag/"
 )
+
+func toPrefixedFeature(key string) string {
+	return fmt.Sprintf("%s%s", FeaturePrefix, key)
+}
 
 var (
 	defaultContentType     = "application/vnd.microsoft.appconfig.kv+json"
 	keyVaultRefContentType = "application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8"
+	featureContentType     = "application/vnd.microsoft.appconfig.ff+json;charset=utf-8"
 )
 
 type Client struct {
@@ -28,6 +36,17 @@ type Client struct {
 type setKeyValuePayload struct {
 	Value       string
 	ContentType string `json:"content_type"`
+}
+
+type featurePayload struct {
+	Id         string                   `json:"id"`
+	Descripton string                   `json:"description"`
+	Enabled    bool                     `json:"enabled"`
+	Conditions featureConditionsPayload `json:"conditions"`
+}
+
+type featureConditionsPayload struct {
+	ClientFilters []string `json:"client_filters"`
 }
 
 func NewClientCreds(endpoint string, clientID string, clientSecret string, tenantID string) (*Client, error) {
@@ -75,7 +94,7 @@ func (client *Client) GetKeyValue(label string, key string) (KeyValueResponse, e
 	result := KeyValueResponse{}
 	resp, err := client.send(
 		label,
-		key,
+		url.QueryEscape(key),
 		true,
 		autorest.AsGet(),
 	)
@@ -102,6 +121,55 @@ func (client *Client) SetKeyValue(label string, key string, value string) (KeyVa
 func (client *Client) SetKeyValueSecret(key string, secretID string, label string) (KeyValueResponse, error) {
 	value := fmt.Sprintf("{\"uri\":\"%s\"}", secretID)
 	return client.setKeyValue(label, key, value, keyVaultRefContentType)
+}
+
+func (client *Client) SetFeature(key string, label string, enabled bool, description string) (KeyValueResponse, error) {
+	actualKey := fmt.Sprintf(".appconfig.featureflag%%2F%s", key)
+
+	featurePayload := featurePayload{
+		Id:         key,
+		Descripton: description,
+		Enabled:    enabled,
+		Conditions: featureConditionsPayload{
+			ClientFilters: []string{},
+		},
+	}
+
+	b, err := json.Marshal(featurePayload)
+	if err != nil {
+		return KeyValueResponse{}, UnexpectedError.wrap(err)
+	}
+
+	return client.setKeyValue(label, actualKey, string(b), featureContentType)
+}
+
+func (client *Client) GetFeature(label string, key string) (FeatureResponse, error) {
+	kvResponse, err := client.GetKeyValue(label, toPrefixedFeature(key))
+	if err != nil {
+		return FeatureResponse{}, err
+	}
+
+	details := featurePayload{}
+	err = json.Unmarshal([]byte(kvResponse.Value), &details)
+	if err != nil {
+		return FeatureResponse{}, UnexpectedError.wrap(err)
+	}
+
+	resp := FeatureResponse{
+		Key:          strings.TrimPrefix(kvResponse.Key, FeaturePrefix),
+		Label:        kvResponse.Label,
+		ContentType:  kvResponse.ContentType,
+		LastModified: kvResponse.LastModified,
+		Tags:         kvResponse.Tags,
+		Description:  details.Descripton,
+		Enabled:      details.Enabled,
+	}
+
+	return resp, nil
+}
+
+func (client *Client) DeleteFeature(label string, key string) (bool, error) {
+	return client.DeleteKeyValue(label, toPrefixedFeature(key))
 }
 
 func (client *Client) setKeyValue(label string, key string, value string, contentType string) (KeyValueResponse, error) {
@@ -138,7 +206,7 @@ func (client *Client) setKeyValue(label string, key string, value string, conten
 func (client *Client) DeleteKeyValue(label string, key string) (bool, error) {
 	resp, err := client.send(
 		label,
-		key,
+		url.QueryEscape(key),
 		false,
 		autorest.AsDelete(),
 	)
