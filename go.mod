@@ -8,6 +8,7 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/aws/aws-sdk-go v1.34.29 // indirect
 	github.com/fatih/color v1.9.0 // indirect
+	github.com/google/uuid v1.1.2
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/stretchr/testify v1.7.0
