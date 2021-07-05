@@ -38,6 +38,7 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"akc_key_value":  resourceKeyValue(),
 			"akc_key_secret": resourceKeySecret(),
+			"akc_feature":    resourceFeature(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"akc_key_value":  dataSourceKeyValue(),
