@@ -163,9 +163,9 @@ func formatID(endpoint string, label string, key string) (string, error) {
 		return "", fmt.Errorf("unable to parse the given endpoint %s", endpoint)
 	}
 
-	name := url.Host
+	host := url.Host
 
-	return fmt.Sprintf("%s/%s/%s", name, label, key), nil
+	return fmt.Sprintf("%s/%s/%s", host, label, key), nil
 }
 
 func parseID(id string) (endpoint string, label string, key string) {

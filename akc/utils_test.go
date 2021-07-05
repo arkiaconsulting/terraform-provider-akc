@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -114,6 +116,29 @@ data "akc_key_secret" "test" {
 `, endpointUnderTest, label, key)
 }
 
+func buildLabeledFeature(name string, label string, description string, enabled bool) string {
+	return fmt.Sprintf(`
+resource "akc_feature" "test" {
+  endpoint     = "%s"
+  name = "%s"
+  label = "%s"
+  description = "%s"
+  enabled = %t
+}
+`, endpointUnderTest, name, label, description, enabled)
+}
+
+func buildFeature(name string, description string, enabled bool) string {
+	return fmt.Sprintf(`
+resource "akc_feature" "test" {
+  endpoint     = "%s"
+  name = "%s"
+  description = "%s"
+  enabled = %t
+}
+`, endpointUnderTest, name, description, enabled)
+}
+
 func testCheckKeyValueDestroy(state *terraform.State) error {
 	log.Printf("[INFO] Entering Destroy")
 	for _, rs := range state.RootModule().Resources {
@@ -143,6 +168,42 @@ func testCheckKeyValueDestroy(state *terraform.State) error {
 		}
 
 		log.Printf("[INFO] KV is destroyed %s/%s/%s", endpoint, label, key)
+
+		return nil
+	}
+
+	return nil
+}
+
+func testCheckFeatureDestroy(state *terraform.State) error {
+	log.Printf("[INFO] Entering Destroy")
+	for _, rs := range state.RootModule().Resources {
+
+		if rs.Type != "akc_feature" {
+			continue
+		}
+
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("No Record ID is set")
+		}
+
+		name := rs.Primary.Attributes["name"]
+		label := rs.Primary.Attributes["label"]
+		endpoint := rs.Primary.Attributes["endpoint"]
+		log.Printf("[INFO] Checking that feature is destroyed %s/%s/%s", endpoint, label, name)
+
+		cl, err := client.NewClientCli(endpoint)
+		if err != nil {
+			return err
+		}
+
+		_, err = cl.GetFeature(label, name)
+
+		if !errors.Is(err, client.AppConfigClientError{Message: client.KVNotFoundError.Message, Info: fmt.Sprintf("%s%s", client.FeaturePrefix, name)}) {
+			return fmt.Errorf("expected %s, got %s", client.KVNotFoundError, err)
+		}
+
+		log.Printf("[INFO] KV is destroyed %s/%s/%s", endpoint, label, name)
 
 		return nil
 	}
@@ -227,6 +288,41 @@ func testCheckKeyValueSecretExists(resource string, kv *client.KeyValueResponse)
 	}
 }
 
+func testCheckFeatureExists(resource string, kv *client.FeatureResponse) resource.TestCheckFunc {
+	return func(state *terraform.State) error {
+		log.Printf("[INFO] Checking that feature exist (%s)", resource)
+
+		rs, ok := state.RootModule().Resources[resource]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resource)
+		}
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("No Record ID is set")
+		}
+
+		endpoint := rs.Primary.Attributes["endpoint"]
+		name := rs.Primary.Attributes["name"]
+		label := rs.Primary.Attributes["label"]
+		cl, err := client.NewClientCli(endpoint)
+		if err != nil {
+			return err
+		}
+
+		result, err := cl.GetFeature(label, name)
+		if errors.Is(err, client.KVNotFoundError) {
+			return fmt.Errorf("Cannot find resource %s", resource)
+		}
+
+		if err != nil {
+			return fmt.Errorf("Error fetching feature with resource %s. %s", resource, err)
+		}
+
+		*kv = result
+
+		return nil
+	}
+}
+
 func testCheckStoredSecretID(kv *client.KeyValueResponse, expectedSecretID string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		log.Print("[INFO] Checking stored secret ID")
@@ -259,4 +355,9 @@ func testCheckStoredValue(kv *client.KeyValueResponse, expectedValue string) res
 
 		return nil
 	}
+}
+
+func randBool() bool {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(2) == 1
 }
