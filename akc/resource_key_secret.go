@@ -2,7 +2,6 @@ package akc
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/url"
 	"strings"
@@ -62,16 +61,14 @@ func resourceKeySecretCreate(d *schema.ResourceData, meta interface{}) error {
 	label := d.Get("label").(string)
 	trim := d.Get("latest_version").(bool)
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
-	if err != nil {
-		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
-	}
+	cl := meta.(*client.Client)
+	cl.Endpoint = endpoint
 
 	if trim {
 		value = trimVersion(value)
 	}
 
-	_, err = cl.SetKeyValueSecret(key, value, label)
+	_, err := cl.SetKeyValueSecret(key, value, label)
 	if err != nil {
 		return err
 	}
@@ -93,16 +90,14 @@ func resourceKeySecretUpdate(d *schema.ResourceData, meta interface{}) error {
 	value := d.Get("secret_id").(string)
 	trim := d.Get("latest_version").(bool)
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
-	if err != nil {
-		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
-	}
+	cl := meta.(*client.Client)
+	cl.Endpoint = endpoint
 
 	if trim {
 		value = trimVersion(value)
 	}
 
-	_, err = cl.SetKeyValueSecret(key, value, label)
+	_, err := cl.SetKeyValueSecret(key, value, label)
 	if err != nil {
 		return err
 	}
@@ -123,10 +118,8 @@ func resourceKeySecretRead(d *schema.ResourceData, meta interface{}) error {
 
 	endpoint, label, key := parseID(d.Id())
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
-	if err != nil {
-		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
-	}
+	cl := meta.(*client.Client)
+	cl.Endpoint = endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	kv, err := cl.GetKeyValue(label, key)

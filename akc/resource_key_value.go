@@ -51,10 +51,8 @@ func resourceKeyValueCreate(d *schema.ResourceData, meta interface{}) error {
 	value := d.Get("value").(string)
 	label := d.Get("label").(string)
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
-	if err != nil {
-		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
-	}
+	cl := meta.(*client.Client)
+	cl.Endpoint = endpoint
 
 	if d.IsNewResource() {
 		_, err := cl.GetKeyValue(label, key)
@@ -63,7 +61,7 @@ func resourceKeyValueCreate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	_, err = cl.SetKeyValue(label, key, value)
+	_, err := cl.SetKeyValue(label, key, value)
 	if err != nil {
 		return err
 	}
@@ -83,10 +81,8 @@ func resourceKeyValueRead(d *schema.ResourceData, meta interface{}) error {
 
 	endpoint, label, key := parseID(d.Id())
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
-	if err != nil {
-		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
-	}
+	cl := meta.(*client.Client)
+	cl.Endpoint = endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	result, err := cl.GetKeyValue(label, key)
@@ -117,12 +113,10 @@ func resourceKeyValueUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	value := d.Get("value").(string)
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
-	if err != nil {
-		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
-	}
+	cl := meta.(*client.Client)
+	cl.Endpoint = endpoint
 
-	_, err = cl.SetKeyValue(label, key, value)
+	_, err := cl.SetKeyValue(label, key, value)
 	if err != nil {
 		return err
 	}
@@ -142,12 +136,10 @@ func resourceKeyValueDelete(d *schema.ResourceData, meta interface{}) error {
 
 	endpoint, label, key := parseID(d.Id())
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
-	if err != nil {
-		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
-	}
+	cl := meta.(*client.Client)
+	cl.Endpoint = endpoint
 
-	_, err = cl.DeleteKeyValue(label, key)
+	_, err := cl.DeleteKeyValue(label, key)
 	if err != nil {
 		return err
 	}

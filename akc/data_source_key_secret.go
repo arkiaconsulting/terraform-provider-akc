@@ -42,10 +42,8 @@ func dataSourceKeySecretRead(d *schema.ResourceData, meta interface{}) error {
 	label := d.Get("label").(string)
 	key := d.Get("key").(string)
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
-	if err != nil {
-		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
-	}
+	cl := meta.(*client.Client)
+	cl.Endpoint = endpoint
 
 	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
 	kv, err := cl.GetKeyValue(label, key)
