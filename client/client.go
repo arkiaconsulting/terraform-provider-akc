@@ -181,7 +181,7 @@ func (client *Client) send(label string, key string, retry bool, additionalDecor
 	var resp *http.Response
 	var retryDecorator autorest.SendDecorator
 	if retry {
-		retryDecorator = autorest.DoRetryForStatusCodes(5, 1*time.Second, 404)
+		retryDecorator = autorest.DoRetryForStatusCodes(5, 5*time.Second/10, 404)
 		resp, err = client.Send(req, retryDecorator)
 	} else {
 		resp, err = client.Send(req)
