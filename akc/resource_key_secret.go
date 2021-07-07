@@ -62,7 +62,7 @@ func resourceKeySecretCreate(d *schema.ResourceData, meta interface{}) error {
 	label := d.Get("label").(string)
 	trim := d.Get("latest_version").(bool)
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
+	cl, err := getClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
 	if err != nil {
 		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
 	}
@@ -93,7 +93,7 @@ func resourceKeySecretUpdate(d *schema.ResourceData, meta interface{}) error {
 	value := d.Get("secret_id").(string)
 	trim := d.Get("latest_version").(bool)
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
+	cl, err := getClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
 	if err != nil {
 		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
 	}
@@ -123,7 +123,7 @@ func resourceKeySecretRead(d *schema.ResourceData, meta interface{}) error {
 
 	endpoint, label, key := parseID(d.Id())
 
-	cl, err := getOrReuseClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
+	cl, err := getClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
 	if err != nil {
 		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
 	}
