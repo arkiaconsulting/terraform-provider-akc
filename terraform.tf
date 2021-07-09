@@ -96,10 +96,44 @@ data "akc_key_secret" "secret2" {
   key      = "my-secret12-latest"
 }
 
+resource "akc_feature" "dark_mode" {
+  endpoint = azurerm_app_configuration.test.endpoint
+  label    = "myLabel"
+  name      = "DarkMode"
+  enabled = false
+  description = "Go to dark !"
+}
+
+data "akc_feature" "dark_mode" {
+  endpoint = azurerm_app_configuration.test.endpoint
+  label    = "myLabel"
+  name      = akc_feature.dark_mode.name
+}
+
+resource "akc_feature" "my_feature" {
+  endpoint = azurerm_app_configuration.test.endpoint
+  name      = "Feature"
+  enabled = true
+  description = "My cool feature"
+}
+
+data "akc_feature" "my_feature" {
+  endpoint = azurerm_app_configuration.test.endpoint
+  name      = akc_feature.my_feature.name
+}
+
 output "one" {
   value = data.akc_key_value.test2_label.value
 }
 
 output "two" {
   value = data.akc_key_secret.secret2.secret_id
+}
+
+output "dark_mode_enabled" {
+  value = data.akc_feature.dark_mode.enabled
+}
+
+output "dark_mode_description" {
+  value = data.akc_feature.dark_mode.description
 }

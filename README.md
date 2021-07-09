@@ -2,7 +2,7 @@
 This terraform provider will allow the creation the Azure App Configuration resources, be they simple values or Key Vault secret references.
 
 ## Usage example
-### Resource
+### Key-Value Resource
 #### Configure the Akc App Configuration provider
 ```terraform
 terraform {
@@ -44,7 +44,7 @@ resource "akc_key_secret" "config_secret" {
 }
 ```
 
-### DataSource
+### Key-Value data source
 #### Source an existing key-value
 ```terraform
 data "akc_key_value" "my_value" {
@@ -64,6 +64,27 @@ data "akc_key_secret" "my_secret_id" {
 }
 ```
 *Reference the resulting secret Id using `data.akc_key_value.my_secret_id.secret_id`*
+
+### Feature resource
+The provider has App Configuration Features support
+```terraform
+resource "akc_feature" "dark_mode" {
+  endpoint  = azurerm_app_configuration.test.endpoint
+  label     = "Dev"                       # Optional
+  name       = "DarkMode"
+  enabled = true                          # Optional
+  description = "Switch UI to dark mode"  # Optional
+}
+```
+
+### Feature data source
+```terraform
+data "akc_feature" "dark_mode" {
+  endpoint  = azurerm_app_configuration.test.endpoint
+  label     = "Dev"                       # Optional
+  name       = "DarkMode"
+}
+```
 
 ## Authorization
 The provider uses the current Azure CLI credentials if available, and fall back to environment variables.
