@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// Provider akc
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
@@ -33,7 +32,7 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeBool,
 				Description: "Use msi if available, will fail if not in a MSI context",
 				Optional:    true,
-				Default:     false,
+				DefaultFunc: schema.EnvDefaultFunc("ARM_USE_MSI", false),
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
