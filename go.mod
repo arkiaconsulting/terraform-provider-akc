@@ -1,6 +1,6 @@
 module github.com/arkiaconsulting/terraform-provider-akc
 
-go 1.14
+go 1.16
 
 require (
 	cloud.google.com/go v0.66.0 // indirect
