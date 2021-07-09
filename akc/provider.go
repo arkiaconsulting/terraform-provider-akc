@@ -43,6 +43,7 @@ func Provider() *schema.Provider {
 		DataSourcesMap: map[string]*schema.Resource{
 			"akc_key_value":  dataSourceKeyValue(),
 			"akc_key_secret": dataSourceKeySecret(),
+			"akc_feature":    dataSourceFeature(),
 		},
 		ConfigureFunc: providerConfigure,
 	}

@@ -197,6 +197,9 @@ func testCheckFeatureDestroy(state *terraform.State) error {
 			return err
 		}
 
+		// eventual consistency
+		time.Sleep(5 * time.Second)
+
 		_, err = cl.GetFeature(label, name)
 
 		if !errors.Is(err, client.AppConfigClientError{Message: client.KVNotFoundError.Message, Info: fmt.Sprintf("%s%s", client.FeaturePrefix, name)}) {
