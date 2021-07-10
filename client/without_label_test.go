@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ type existingKeyValueTestSuite struct {
 
 func (s *existingKeyValueTestSuite) SetupSuite() {
 	s.uri = "https://testlg.azconfig.io"
-	client, err := NewClientCli(s.uri)
+	client, err := NewClientCreds(s.uri, os.Getenv("ARM_CLIENT_ID"), os.Getenv("ARM_CLIENT_SECRET"), os.Getenv("ARM_TENANT_ID"))
 
 	if err != nil {
 		panic(err)
