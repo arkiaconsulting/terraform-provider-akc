@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -28,7 +29,7 @@ type featuresTestSuite struct {
 
 func (s *featuresTestSuite) SetupSuite() {
 	s.uri = "https://testlg.azconfig.io"
-	client, err := NewClientCli(s.uri)
+	client, err := NewClientCreds(s.uri, os.Getenv("ARM_CLIENT_ID"), os.Getenv("ARM_CLIENT_SECRET"), os.Getenv("ARM_TENANT_ID"))
 
 	if err != nil {
 		panic(err)
