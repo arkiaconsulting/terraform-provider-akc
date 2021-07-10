@@ -1,0 +1,70 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.187.0/containers/ubuntu
+{
+	"name": "Terraform Provider Akc",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"args": {
+			"GO_VERSION": "1.16.5",
+			"TERRAFORM_VERSION": "1.0.2",
+			"TFLINT_VERSION": "0.24.1",
+			"UPGRADE_PACKAGES": "true",
+			"INSTALL_ZSH": "false"
+		}
+	},
+	"overrideCommand": false,
+	"mounts": [
+		"source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind"
+	],
+	"runArgs": [
+		"--env-file",
+		".devcontainer/devcontainer.env"
+	],
+	"remoteEnv": {
+		"TF_ACC": "1",
+		"ARM_TENANT_ID": "${containerEnv:ARM_TENANT_ID}",
+		"ARM_SUBSCRIPTION_ID": "${containerEnv:ARM_SUBSCRIPTION_ID}",
+		"ARM_CLIENT_ID": "${containerEnv:ARM_CLIENT_ID}",
+		"ARM_CLIENT_SECRET": "${containerEnv:ARM_CLIENT_SECRET}",
+	},
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"terminal.integrated.defaultProfile.linux": "bash",
+		"terminal.integrated.profiles.linux": {
+			"bash": {
+				"path": "bash"
+			}
+		},
+		"go.toolsManagement.checkForUpdates": "local",
+		"go.gopath": "~/go",
+		"go.useLanguageServer": true,
+		"[go]": {
+			"editor.snippetSuggestions": "none",
+			"editor.formatOnSave": true,
+			"editor.codeActionsOnSave": {
+				"source.organizeImports": true,
+			}
+		},
+		"gopls": {
+			"usePlaceholders": true // add parameter placeholders when completing a function
+		},
+		"terraform.languageServer": {
+			"enabled": true,
+			"args": []
+		},
+		"azureTerraform.terminal": "integrated"
+	},
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"golang.go",
+		"hashicorp.terraform",
+		"ms-azuretools.vscode-azureterraform",
+		"ms-azuretools.vscode-docker"
+	],
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "uname -a",
+	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode"
+}

@@ -7,3 +7,5 @@ azureenv.sh
 .publish/
 vendor/
 .env
+.devcontainer/devcontainer.env
+terraform.d/

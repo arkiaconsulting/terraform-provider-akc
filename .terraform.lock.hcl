@@ -4,7 +4,7 @@
 provider "github.com/arkiaconsulting/akc" {
   version = "0.0.11"
   hashes = [
-    "h1:qjfEsQfIBd+b5pinMuV7PS0vZIbBQqX53pWgHmpCvi8=",
+    "h1:yYQvVYv5eHWOnmHfOmfAiGO7ToA36Nv2ozqNwPXfrXM=",
   ]
 }
 
