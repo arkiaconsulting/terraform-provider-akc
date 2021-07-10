@@ -30,8 +30,8 @@ install-git-bash: build
 	mv ${BINARY} ${APPDATA}/terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/windows_amd64/${BINARY}.exe
 
 install-linux: build
-	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
-	mv ${BINARY} ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
+	mkdir -p terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
+	mv ${BINARY} terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
 
 test-tf: 
 	TF_ACC=1 go test ./akc -v $(TESTARGS) -timeout 120m
