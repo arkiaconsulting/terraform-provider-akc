@@ -43,3 +43,16 @@ func (err AppConfigClientError) Is(target error) bool {
 
 	return t.Error() == err.Message
 }
+
+func IsNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	e, ok := err.(AppConfigClientError)
+	if !ok {
+		return false
+	}
+
+	return e.Message == KVNotFoundError.Message
+}

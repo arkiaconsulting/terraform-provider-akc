@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -51,6 +52,9 @@ func resourceKeySecret() *schema.Resource {
 				Computed: true,
 			},
 		},
+		Timeouts: &schema.ResourceTimeout{
+			Read: schema.DefaultTimeout(readTimeout),
+		},
 	}
 }
 
@@ -69,6 +73,28 @@ func resourceKeySecretCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if trim {
 		value = trimVersion(value)
+	}
+
+	if d.IsNewResource() {
+		err = resource.Retry(d.Timeout(schema.TimeoutRead), func() *resource.RetryError {
+			_, err = cl.GetKeyValue(label, key)
+
+			if err != nil {
+				if client.IsNotFound(err) {
+					log.Printf("[INFO] retrying to get key-secret '%s/%s' because: %s", label, key, err)
+
+					return resource.RetryableError(err)
+				}
+
+				return resource.NonRetryableError(err)
+			}
+
+			return nil
+		})
+
+		if err == nil {
+			return fmt.Errorf("the resource needs to be imported: %s", "akc_key_value")
+		}
 	}
 
 	_, err = cl.SetKeyValueSecret(key, value, label)
@@ -128,16 +154,27 @@ func resourceKeySecretRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
 	}
 
-	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	kv, err := cl.GetKeyValue(label, key)
+	var kv client.KeyValueResponse
+	err = resource.Retry(d.Timeout(schema.TimeoutRead), func() *resource.RetryError {
+		kv, err = cl.GetKeyValue(label, key)
+
+		if err != nil {
+			if client.IsNotFound(err) {
+				log.Printf("[INFO] retrying to get key-secret '%s/%s' because: %s", label, key, err)
+
+				return resource.RetryableError(err)
+			}
+
+			return resource.NonRetryableError(err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, key)
+		log.Printf("[INFO] key-secret not found, removing from state: %s/%s/%s\n", endpoint, label, key)
 		d.SetId("")
 		return nil
-	}
-
-	if kv.Label == "" {
-		kv.Label = client.LabelNone
 	}
 
 	var wrapper keyVaultReferenceValue
@@ -148,10 +185,10 @@ func resourceKeySecretRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("key", key)
 	d.Set("value", wrapper.URI)
-	d.Set("label", kv.Label)
+	d.Set("label", label)
 	d.Set("endpoint", endpoint)
 
-	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, wrapper.URI)
+	log.Printf("[INFO] the key-secret '%s/%s/%s=%s' was read successfuly\n", endpoint, label, key, wrapper.URI)
 
 	return nil
 }

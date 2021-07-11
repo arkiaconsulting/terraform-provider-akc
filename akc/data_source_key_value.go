@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -31,6 +32,9 @@ func dataSourceKeyValue() *schema.Resource {
 				Computed: true,
 			},
 		},
+		Timeouts: &schema.ResourceTimeout{
+			Read: schema.DefaultTimeout(readTimeout),
+		},
 	}
 }
 
@@ -46,14 +50,25 @@ func dataSourceKeyValueRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
 	}
 
-	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	kv, err := cl.GetKeyValue(label, key)
+	var kv client.KeyValueResponse
+	err = resource.Retry(d.Timeout(schema.TimeoutRead), func() *resource.RetryError {
+		kv, err = cl.GetKeyValue(label, key)
+
+		if err != nil {
+			if client.IsNotFound(err) {
+				log.Printf("[INFO] retrying to get key-value '%s/%s' because: %s", label, key, err)
+
+				return resource.RetryableError(err)
+			}
+
+			return resource.NonRetryableError(err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return fmt.Errorf("error getting App Configuration key %s/%s: %+v", label, key, err)
-	}
-
-	if kv.Label == "" {
-		kv.Label = client.LabelNone
 	}
 
 	id, err := formatID(endpoint, label, key)
@@ -64,7 +79,7 @@ func dataSourceKeyValueRead(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(id)
 	d.Set("key", key)
 	d.Set("value", kv.Value)
-	d.Set("label", kv.Label)
+	d.Set("label", label)
 
 	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, kv.Value)
 

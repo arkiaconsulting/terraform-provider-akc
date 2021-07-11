@@ -1,6 +1,10 @@
 package akc
 
-import "github.com/arkiaconsulting/terraform-provider-akc/client"
+import (
+	"time"
+
+	"github.com/arkiaconsulting/terraform-provider-akc/client"
+)
 
 func getClient(endpoint string, clientBuilder func(endpoint string) (*client.Client, error)) (*client.Client, error) {
 	cl, err := clientBuilder(endpoint)
@@ -9,3 +13,5 @@ func getClient(endpoint string, clientBuilder func(endpoint string) (*client.Cli
 	}
 	return cl, nil
 }
+
+const readTimeout = 20 * time.Second

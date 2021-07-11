@@ -97,29 +97,29 @@ data "akc_key_secret" "secret2" {
 }
 
 resource "akc_feature" "dark_mode" {
-  endpoint = azurerm_app_configuration.test.endpoint
-  label    = "myLabel"
-  name      = "DarkMode"
-  enabled = false
+  endpoint    = azurerm_app_configuration.test.endpoint
+  label       = "myLabel"
+  name        = "DarkMode"
+  enabled     = false
   description = "Go to dark !"
 }
 
 data "akc_feature" "dark_mode" {
   endpoint = azurerm_app_configuration.test.endpoint
   label    = "myLabel"
-  name      = akc_feature.dark_mode.name
+  name     = akc_feature.dark_mode.name
 }
 
 resource "akc_feature" "my_feature" {
-  endpoint = azurerm_app_configuration.test.endpoint
-  name      = "Feature"
-  enabled = true
+  endpoint    = azurerm_app_configuration.test.endpoint
+  name        = "Feature"
+  enabled     = true
   description = "My cool feature"
 }
 
 data "akc_feature" "my_feature" {
   endpoint = azurerm_app_configuration.test.endpoint
-  name      = akc_feature.my_feature.name
+  name     = akc_feature.my_feature.name
 }
 
 output "one" {

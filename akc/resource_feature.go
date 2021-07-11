@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -45,6 +46,9 @@ func resourceFeature() *schema.Resource {
 				Optional: true,
 			},
 		},
+		Timeouts: &schema.ResourceTimeout{
+			Read: schema.DefaultTimeout(readTimeout),
+		},
 	}
 }
 
@@ -62,7 +66,22 @@ func resourceFeatureCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if d.IsNewResource() {
-		_, err := cl.GetFeature(label, name)
+		err = resource.Retry(d.Timeout(schema.TimeoutRead), func() *resource.RetryError {
+			_, err = cl.GetFeature(label, name)
+
+			if err != nil {
+				if client.IsNotFound(err) {
+					log.Printf("[INFO] retrying to get feature '%s/%s' because: %s", label, name, err)
+
+					return resource.RetryableError(err)
+				}
+
+				return resource.NonRetryableError(err)
+			}
+
+			return nil
+		})
+
 		if err == nil {
 			return fmt.Errorf("the resource needs to be imported: %s", d.Id())
 		}
@@ -84,7 +103,6 @@ func resourceFeatureCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceFeatureRead(d *schema.ResourceData, meta interface{}) error {
-
 	endpoint, label, name := parseFeatureID(d.Id())
 
 	cl, err := getClient(endpoint, meta.(func(endpoint string) (*client.Client, error)))
@@ -92,7 +110,23 @@ func resourceFeatureRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
 	}
 
-	result, err := cl.GetFeature(label, name)
+	var feature client.FeatureResponse
+	err = resource.Retry(d.Timeout(schema.TimeoutRead), func() *resource.RetryError {
+		feature, err = cl.GetFeature(label, name)
+
+		if err != nil {
+			if client.IsNotFound(err) {
+				log.Printf("[INFO] retrying to get feature '%s:%s' because: %s", label, name, err)
+
+				return resource.RetryableError(err)
+			}
+
+			return resource.NonRetryableError(err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, name)
 		d.SetId("")
@@ -102,8 +136,8 @@ func resourceFeatureRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("endpoint", endpoint)
 	d.Set("name", name)
 	d.Set("label", label)
-	d.Set("description", result.Description)
-	d.Set("enabled", result.Enabled)
+	d.Set("description", feature.Description)
+	d.Set("enabled", feature.Enabled)
 
 	log.Printf("[INFO] KV has been fetched %s/%s/%s", endpoint, label, name)
 

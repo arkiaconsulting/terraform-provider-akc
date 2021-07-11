@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestAccKeyValue_create(t *testing.T) {
+func TestAccKeyValue_createNoLabel(t *testing.T) {
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
 	var kv client.KeyValueResponse
@@ -38,7 +38,7 @@ func TestAccKeyValue_create(t *testing.T) {
 	})
 }
 
-func TestAccKeyValue_createWithLabel(t *testing.T) {
+func TestAccKeyValue_create(t *testing.T) {
 	label := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	key := acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)
 	value := acctest.RandStringFromCharSet(20, acctest.CharSetAlphaNum)
