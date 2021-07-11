@@ -58,6 +58,7 @@ func NewClientCreds(endpoint string, clientID string, clientSecret string, tenan
 	if err != nil {
 		return nil, err
 	}
+
 	return NewClient(endpoint, authorizer)
 }
 
@@ -95,7 +96,6 @@ func (client *Client) GetKeyValue(label string, key string) (KeyValueResponse, e
 	resp, err := client.send(
 		label,
 		url.QueryEscape(key),
-		true,
 		autorest.AsGet(),
 	)
 
@@ -182,7 +182,6 @@ func (client *Client) setKeyValue(label string, key string, value string, conten
 	resp, err := client.send(
 		label,
 		key,
-		false,
 		autorest.AsContentType(defaultContentType),
 		autorest.AsPut(),
 		autorest.WithJSON(payload),
@@ -207,7 +206,6 @@ func (client *Client) DeleteKeyValue(label string, key string) (bool, error) {
 	resp, err := client.send(
 		label,
 		url.QueryEscape(key),
-		false,
 		autorest.AsDelete(),
 	)
 	if err != nil {
@@ -235,7 +233,7 @@ func getJSON(response *http.Response, target interface{}) error {
 	return err
 }
 
-func (client *Client) send(label string, key string, retry bool, additionalDecorator ...autorest.PrepareDecorator) (*http.Response, error) {
+func (client *Client) send(label string, key string, additionalDecorator ...autorest.PrepareDecorator) (*http.Response, error) {
 	req, err := client.getPreparer(
 		label,
 		key,
@@ -247,16 +245,15 @@ func (client *Client) send(label string, key string, retry bool, additionalDecor
 	}
 
 	var resp *http.Response
-	var retryDecorator autorest.SendDecorator
-	if retry {
-		retryDecorator = autorest.DoRetryForStatusCodes(5, 5*time.Second/10, 404)
-		resp, err = client.Send(req, retryDecorator)
-	} else {
-		resp, err = client.Send(req)
-	}
+	retryDecorator := autorest.DoRetryForStatusCodes(5, 2*time.Second, 500, 503, 502)
+	resp, err = client.Send(req, retryDecorator)
 
 	if err != nil {
 		return nil, UnexpectedError.wrap(err)
+	}
+
+	if utils.ResponseWasNotFound(resp) {
+		return nil, KVNotFoundError.with("Not found")
 	}
 
 	if utils.ResponseWasThrottled(resp) {

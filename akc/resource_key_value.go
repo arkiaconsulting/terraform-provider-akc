@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/arkiaconsulting/terraform-provider-akc/client"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -40,6 +41,9 @@ func resourceKeyValue() *schema.Resource {
 				ForceNew: true,
 			},
 		},
+		Timeouts: &schema.ResourceTimeout{
+			Read: schema.DefaultTimeout(readTimeout),
+		},
 	}
 }
 
@@ -57,7 +61,22 @@ func resourceKeyValueCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if d.IsNewResource() {
-		_, err := cl.GetKeyValue(label, key)
+		err = resource.Retry(d.Timeout(schema.TimeoutRead), func() *resource.RetryError {
+			_, err = cl.GetKeyValue(label, key)
+
+			if err != nil {
+				if client.IsNotFound(err) {
+					log.Printf("[INFO] retrying to get key-value '%s/%s' because: %s", label, key, err)
+
+					return resource.RetryableError(err)
+				}
+
+				return resource.NonRetryableError(err)
+			}
+
+			return nil
+		})
+
 		if err == nil {
 			return fmt.Errorf("the resource needs to be imported: %s", "akc_key_value")
 		}
@@ -88,24 +107,35 @@ func resourceKeyValueRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error building client for endpoint %s: %+v", endpoint, err)
 	}
 
-	log.Printf("[INFO] Fetching KV %s/%s/%s", endpoint, label, key)
-	result, err := cl.GetKeyValue(label, key)
+	var kv client.KeyValueResponse
+	err = resource.Retry(d.Timeout(schema.TimeoutRead), func() *resource.RetryError {
+		kv, err = cl.GetKeyValue(label, key)
+
+		if err != nil {
+			if client.IsNotFound(err) {
+				log.Printf("[INFO] retrying to get key-value '%s/%s' because: %s", label, key, err)
+
+				return resource.RetryableError(err)
+			}
+
+			return resource.NonRetryableError(err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		log.Printf("[INFO] KV not found, removing from state: %s/%s/%s", endpoint, label, key)
+		log.Printf("[INFO] key-value not found, removing from state: %s/%s/%s", endpoint, label, key)
 		d.SetId("")
 		return nil
 	}
 
-	if result.Label == "" {
-		result.Label = client.LabelNone
-	}
-
 	d.Set("key", key)
-	d.Set("value", result.Value)
-	d.Set("label", result.Label)
+	d.Set("value", kv.Value)
+	d.Set("label", label)
 	d.Set("endpoint", endpoint)
 
-	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, result.Value)
+	log.Printf("[INFO] KV has been fetched %s/%s/%s=%s", endpoint, label, key, kv.Value)
 
 	return nil
 }

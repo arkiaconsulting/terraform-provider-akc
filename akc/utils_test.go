@@ -2,7 +2,6 @@ package akc
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -64,6 +63,16 @@ resource "akc_key_secret" "test" {
   secret_id = "%s"
 }
 `, endpointUnderTest, label, key, secretID)
+}
+
+func buildTerraformConfigSecretNoLabel(key string, secretID string) string {
+	return fmt.Sprintf(`
+resource "akc_key_secret" "test" {
+  endpoint     = "%s"
+  key = "%s"
+  secret_id = "%s"
+}
+`, endpointUnderTest, key, secretID)
 }
 
 func buildTerraformConfigSecretLatestVersion(label string, key string, secretID string, latestVersion bool) string {
@@ -154,20 +163,20 @@ func testCheckKeyValueDestroy(state *terraform.State) error {
 		key := rs.Primary.Attributes["key"]
 		label := rs.Primary.Attributes["label"]
 		endpoint := rs.Primary.Attributes["endpoint"]
-		log.Printf("[INFO] Checking that KV is destroyed %s/%s/%s", endpoint, label, key)
+		fmt.Printf("checking that the key-value is destroyed %s/%s/%s", endpoint, label, key)
 
-		cl, err := client.NewClientCli(endpoint)
+		cl, err := getClient(endpoint, testProviders["akc"].Meta().(func(endpoint string) (*client.Client, error)))
 		if err != nil {
 			return err
 		}
 
 		_, err = cl.GetKeyValue(label, key)
 
-		if !errors.Is(err, client.AppConfigClientError{Message: client.KVNotFoundError.Message, Info: key}) {
-			return fmt.Errorf("expected %s, got %s", client.KVNotFoundError, err)
+		if !client.IsNotFound(err) {
+			return fmt.Errorf("we expected not to find the key-value, but it's still there")
 		}
 
-		log.Printf("[INFO] KV is destroyed %s/%s/%s", endpoint, label, key)
+		fmt.Println("ok, the key-value was destroyed")
 
 		return nil
 	}
@@ -190,23 +199,20 @@ func testCheckFeatureDestroy(state *terraform.State) error {
 		name := rs.Primary.Attributes["name"]
 		label := rs.Primary.Attributes["label"]
 		endpoint := rs.Primary.Attributes["endpoint"]
-		log.Printf("[INFO] Checking that feature is destroyed %s/%s/%s", endpoint, label, name)
+		fmt.Printf("checking that the feature '%s/%s/%s' is destroyed\n", endpoint, label, name)
 
-		cl, err := client.NewClientCli(endpoint)
+		cl, err := getClient(endpoint, testProviders["akc"].Meta().(func(endpoint string) (*client.Client, error)))
 		if err != nil {
 			return err
 		}
 
-		// eventual consistency
-		time.Sleep(5 * time.Second)
-
 		_, err = cl.GetFeature(label, name)
 
-		if !errors.Is(err, client.AppConfigClientError{Message: client.KVNotFoundError.Message, Info: fmt.Sprintf("%s%s", client.FeaturePrefix, name)}) {
-			return fmt.Errorf("expected %s, got %s", client.KVNotFoundError, err)
+		if !client.IsNotFound(err) {
+			return fmt.Errorf("we expected not to find the feature, but it's still there")
 		}
 
-		log.Printf("[INFO] KV is destroyed %s/%s/%s", endpoint, label, name)
+		fmt.Println("ok, the feature was destroyed")
 
 		return nil
 	}
@@ -216,7 +222,7 @@ func testCheckFeatureDestroy(state *terraform.State) error {
 
 func testCheckKeyValueExists(resource string, kv *client.KeyValueResponse) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
-		log.Printf("[INFO] Checking that KV exist (%s)", resource)
+		fmt.Printf("checking that the key-value '%s' exists\n", resource)
 
 		rs, ok := state.RootModule().Resources[resource]
 		if !ok {
@@ -230,14 +236,21 @@ func testCheckKeyValueExists(resource string, kv *client.KeyValueResponse) resou
 		key := rs.Primary.Attributes["key"]
 		value := rs.Primary.Attributes["value"]
 		label := rs.Primary.Attributes["label"]
-		cl, err := client.NewClientCli(endpoint)
+
+		cl, err := getClient(endpoint, testProviders["akc"].Meta().(func(endpoint string) (*client.Client, error)))
 		if err != nil {
 			return err
 		}
 
 		result, err := cl.GetKeyValue(label, key)
-		if errors.Is(err, client.KVNotFoundError) {
-			return fmt.Errorf("Cannot find resource %s", resource)
+		if client.IsNotFound(err) {
+			// let some time for eventual consistency
+			time.Sleep(5 * time.Second)
+			result, err = cl.GetKeyValue(label, key)
+
+			if client.IsNotFound(err) {
+				return fmt.Errorf("Cannot find resource %s", resource)
+			}
 		}
 
 		if err != nil {
@@ -248,6 +261,8 @@ func testCheckKeyValueExists(resource string, kv *client.KeyValueResponse) resou
 			return fmt.Errorf("The given key %s exists but its value does not match", key)
 		}
 
+		fmt.Printf("the key-value '%s' was found\n", resource)
+
 		*kv = result
 
 		return nil
@@ -256,7 +271,7 @@ func testCheckKeyValueExists(resource string, kv *client.KeyValueResponse) resou
 
 func testCheckKeyValueSecretExists(resource string, kv *client.KeyValueResponse) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
-		log.Printf("[INFO] Checking that KV secret exist (%s)", resource)
+		fmt.Printf("checking that the key-secret '%s' exists\n", resource)
 
 		rs, ok := state.RootModule().Resources[resource]
 		if !ok {
@@ -269,21 +284,28 @@ func testCheckKeyValueSecretExists(resource string, kv *client.KeyValueResponse)
 		endpoint := rs.Primary.Attributes["endpoint"]
 		key := rs.Primary.Attributes["key"]
 		label := rs.Primary.Attributes["label"]
-		cl, err := client.NewClientCli(endpoint)
+
+		cl, err := getClient(endpoint, testProviders["akc"].Meta().(func(endpoint string) (*client.Client, error)))
 		if err != nil {
 			return err
 		}
 
 		result, err := cl.GetKeyValue(label, key)
-		if errors.Is(err, client.KVNotFoundError) {
-			return fmt.Errorf("Cannot find resource %s", resource)
+		if client.IsNotFound(err) {
+			// let some time for eventual consistency
+			time.Sleep(5 * time.Second)
+			result, err = cl.GetKeyValue(label, key)
+
+			if client.IsNotFound(err) {
+				return fmt.Errorf("Cannot find resource %s", resource)
+			}
 		}
 
 		if err != nil {
 			return fmt.Errorf("Error fetching KV with resource %s. %s", resource, err)
 		}
 
-		log.Printf("[INFO] Key %s found with value %s", key, result.Value)
+		fmt.Printf("the key-secret '%s' was found\n", resource)
 
 		*kv = result
 
@@ -293,7 +315,7 @@ func testCheckKeyValueSecretExists(resource string, kv *client.KeyValueResponse)
 
 func testCheckFeatureExists(resource string, kv *client.FeatureResponse) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
-		log.Printf("[INFO] Checking that feature exist (%s)", resource)
+		fmt.Printf("checking that the feature '%s' exists\n", resource)
 
 		rs, ok := state.RootModule().Resources[resource]
 		if !ok {
@@ -306,19 +328,28 @@ func testCheckFeatureExists(resource string, kv *client.FeatureResponse) resourc
 		endpoint := rs.Primary.Attributes["endpoint"]
 		name := rs.Primary.Attributes["name"]
 		label := rs.Primary.Attributes["label"]
-		cl, err := client.NewClientCli(endpoint)
+
+		cl, err := getClient(endpoint, testProviders["akc"].Meta().(func(endpoint string) (*client.Client, error)))
 		if err != nil {
 			return err
 		}
 
 		result, err := cl.GetFeature(label, name)
-		if errors.Is(err, client.KVNotFoundError) {
-			return fmt.Errorf("Cannot find resource %s", resource)
+		if client.IsNotFound(err) {
+
+			// let some time for eventual consistency
+			time.Sleep(5 * time.Second)
+			result, err = cl.GetFeature(label, name)
+			if client.IsNotFound(err) {
+				return fmt.Errorf("error checking that the resource '%s' exists (%s)", resource, err)
+			}
 		}
 
 		if err != nil {
 			return fmt.Errorf("Error fetching feature with resource %s. %s", resource, err)
 		}
+
+		fmt.Printf("the feature '%s' was found\n", resource)
 
 		*kv = result
 
@@ -328,7 +359,7 @@ func testCheckFeatureExists(resource string, kv *client.FeatureResponse) resourc
 
 func testCheckStoredSecretID(kv *client.KeyValueResponse, expectedSecretID string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
-		log.Print("[INFO] Checking stored secret ID")
+		fmt.Printf("checking that the right secret ID '%s' was stored\n", expectedSecretID)
 
 		var actualStoredValue keyVaultReferenceValue
 		err := json.Unmarshal([]byte(kv.Value), &actualStoredValue)
@@ -340,7 +371,7 @@ func testCheckStoredSecretID(kv *client.KeyValueResponse, expectedSecretID strin
 			return fmt.Errorf("Stored secret ID '%s' does not match expected one '%s'", actualStoredValue.URI, expectedSecretID)
 		}
 
-		log.Printf("[INFO] Right secret ID was stored: '%s'", expectedSecretID)
+		fmt.Println("ok, the right secret ID was stored")
 
 		return nil
 	}
@@ -348,13 +379,13 @@ func testCheckStoredSecretID(kv *client.KeyValueResponse, expectedSecretID strin
 
 func testCheckStoredValue(kv *client.KeyValueResponse, expectedValue string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
-		log.Print("[INFO] Checking stored value")
+		fmt.Printf("checking that the value '%s' was stored\n", expectedValue)
 
 		if kv.Value != expectedValue {
 			return fmt.Errorf("Stored value '%s' does not match expected one '%s'", kv.Value, expectedValue)
 		}
 
-		log.Printf("[INFO] Right value was stored: '%s'", expectedValue)
+		fmt.Println("ok, the right value was stored")
 
 		return nil
 	}

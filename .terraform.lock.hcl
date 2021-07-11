@@ -2,9 +2,19 @@
 # Manual edits may be lost in future updates.
 
 provider "github.com/arkiaconsulting/akc" {
-  version = "0.0.11"
+  version = "0.0.14"
   hashes = [
-    "h1:yYQvVYv5eHWOnmHfOmfAiGO7ToA36Nv2ozqNwPXfrXM=",
+    "h1:l5QGBx0tUIOEU4A+zWP0c85MQN6IACzVlLgxG/mGLss=",
+  ]
+}
+
+provider "registry.terraform.io/arkiaconsulting/akc" {
+  version = "1.1.0"
+  hashes = [
+    "h1:FVVFFDC8krI4TgZemputPIwGihgTat8cIaXe2vU6FgU=",
+    "zh:0fb1ad4f4dd30c31406a1b8f401436aeaa93cbbf26b3946ffa48688ed25a1f3c",
+    "zh:3b9153cdc881e5d37eda77ecc64367e7b5c97d5b8510c6d1f98c672680e6d3ad",
+    "zh:75480212a8081dae41eb2d3af7285bcadf2973b5cb5fff3faa84d74517be5793",
   ]
 }
 
