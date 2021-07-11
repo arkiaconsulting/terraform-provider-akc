@@ -20,13 +20,8 @@
 		"--env-file",
 		".devcontainer/devcontainer.env"
 	],
-	"remoteEnv": {
-		"TF_ACC": "1",
-		"ARM_TENANT_ID": "${containerEnv:ARM_TENANT_ID}",
-		"ARM_SUBSCRIPTION_ID": "${containerEnv:ARM_SUBSCRIPTION_ID}",
-		"ARM_CLIENT_ID": "${containerEnv:ARM_CLIENT_ID}",
-		"ARM_CLIENT_SECRET": "${containerEnv:ARM_CLIENT_SECRET}",
-	},
+	"containerEnv": {},
+	"remoteEnv": {},
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
 		"terminal.integrated.defaultProfile.linux": "bash",
@@ -43,28 +38,38 @@
 			"editor.formatOnSave": true,
 			"editor.codeActionsOnSave": {
 				"source.organizeImports": true,
-			}
+			},
 		},
 		"gopls": {
 			"usePlaceholders": true // add parameter placeholders when completing a function
 		},
+		"go.autocompleteUnimportedPackages": true,
+		"go.lintTool": "golangci-lint",
+		"go.lintOnSave": "workspace",
+		"go.vetOnSave": "workspace",
+		"editor.formatOnSave": true,
+		"go.coverOnSingleTest": true,
+		"go.coverOnSingleTestFile": true,
+		"go.coverOnTestPackage": true,
 		"terraform.languageServer": {
 			"enabled": true,
 			"args": []
 		},
-		"azureTerraform.terminal": "integrated"
+		"azureTerraform.terminal": "integrated",
 	},
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
 		"golang.go",
 		"hashicorp.terraform",
 		"ms-azuretools.vscode-azureterraform",
-		"ms-azuretools.vscode-docker"
+		"ms-azuretools.vscode-docker",
+		"vscode-icons-team.vscode-icons",
+		"github.vscode-pull-request-github"
 	],
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "uname -a",
+	"postCreateCommand": "echo 'PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc; echo 'export REMOTE_CONTAINERS_IPC=$(ls -1rt `find /tmp -name vscode-remote-containers-ipc*` | tail -1)' > ~/.ipc; ",
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode"
 }
