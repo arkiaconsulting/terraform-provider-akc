@@ -4,8 +4,8 @@ go 1.16
 
 require (
 	cloud.google.com/go v0.66.0 // indirect
-	github.com/Azure/go-autorest/autorest v0.10.0
-	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
+	github.com/Azure/go-autorest/autorest v0.11.19
+	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
 	github.com/aws/aws-sdk-go v1.34.29 // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/google/uuid v1.1.2
